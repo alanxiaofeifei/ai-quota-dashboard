@@ -1,0 +1,35 @@
+name: Official Windows App Server without credentials
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  noauth:
+    runs-on: windows-latest
+    timeout-minutes: 6
+    steps:
+      - uses: actions/checkout@v4
+      - name: Download and verify the audited official release
+        shell: pwsh
+        run: |
+          $quotaArchive = Join-Path $env:RUNNER_TEMP 'codex-app-server-0.167.1.zip'
+          $quotaClientDir = Join-Path $env:RUNNER_TEMP 'quota-noauth-client'
+          Invoke-WebRequest -Uri 'https://github.com/openai/codex/releases/download/rust-v0.167.1/codex-app-server-x86_64-pc-windows-msvc.exe.zip' -OutFile $quotaArchive
+          $quotaDigest = (Get-FileHash -LiteralPath $quotaArchive -Algorithm SHA256).Hash.ToLowerInvariant()
+          if ($quotaDigest -ne '6a77d3e7a14e32b345904c0bedfcae2e7c353ca90ec1e4baed6fde75c853c933') { throw 'Official release digest mismatch' }
+          Expand-Archive -LiteralPath $quotaArchive -DestinationPath $quotaClientDir
+      - name: Check the unauthenticated refusal with an ephemeral profile
+        shell: pwsh
+        run: |
+          $quotaClientDir = Join-Path $env:RUNNER_TEMP 'quota-noauth-client'
+          $quotaBinaries = @(Get-ChildItem -LiteralPath $quotaClientDir -Recurse -File -Filter 'codex-app-server*.exe')
+          if ($quotaBinaries.Count -ne 1) { throw 'Expected exactly one official App Server binary' }
+          New-Item -ItemType Directory -Path reports -Force | Out-Null
+          $quotaReport = & python scripts/codex-unauthenticated-smoke.py --binary $quotaBinaries[0].FullName --kind app-server
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          $quotaReport | Set-Content -LiteralPath reports/windows-noauth.json -Encoding utf8
+      - uses: actions/upload-artifact@v4
+        with:
+          name: official-Windows-noauth-report
+          path: reports/windows-noauth.json
+          if-no-files-found: error

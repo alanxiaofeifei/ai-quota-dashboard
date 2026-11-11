@@ -11,7 +11,7 @@ const execute = promisify(execFile);
 const decoder = new TextDecoder('utf-8', { fatal: true });
 const functionalRoots = [
   'src', 'crates', 'tests', 'fixtures', 'web', 'site', 'shared', 'scripts',
-  '.github', 'app', 'worker', 'db', 'drizzle', 'public',
+  '.github', 'app', 'worker', 'db', 'drizzle', 'public', 'browser-extension',
 ];
 const runtimeDirectories = new Set([
   '.git', 'node_modules', '.sites-runtime', '.wrangler', '.cache', '.next',

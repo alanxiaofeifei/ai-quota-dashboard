@@ -189,11 +189,31 @@ fn exchange(
     if before != after {
         return Err(ProbeError::AccountChanged);
     }
+    match quota.get("accountId") {
+        None | Some(Value::Null) => {}
+        Some(Value::String(id)) if valid_identity_field(id) => {
+            if id != &before.workspace_id {
+                return Err(ProbeError::AccountChanged);
+            }
+        }
+        Some(_) => return Err(ProbeError::InvalidQuota),
+    }
     parse_codex_rate_limits(&quota).map_err(|_| ProbeError::InvalidQuota)
 }
 
 // Account details live only in memory for race detection, never report or error text.
-fn identity(body: &Value) -> Result<Vec<Option<String>>, ProbeError> {
+#[derive(PartialEq, Eq)]
+struct AccountIdentity {
+    workspace_id: String,
+    email: Option<String>,
+    plan_type: Option<String>,
+}
+
+fn valid_identity_field(value: &str) -> bool {
+    !value.is_empty() && value.len() <= 512 && !value.chars().any(char::is_control)
+}
+
+fn identity(body: &Value) -> Result<AccountIdentity, ProbeError> {
     let account = body
         .get("account")
         .and_then(Value::as_object)
@@ -201,23 +221,24 @@ fn identity(body: &Value) -> Result<Vec<Option<String>>, ProbeError> {
     if account.get("type").and_then(Value::as_str) != Some("chatgpt") {
         return Err(ProbeError::AccountUnavailable);
     }
-    let mut identity = Vec::new();
-    for key in ["accountId", "chatgptAccountId", "email", "planType"] {
+    let workspace_id = body
+        .pointer("/workspaceRouting/chatgptAccountId")
+        .and_then(Value::as_str)
+        .filter(|value| valid_identity_field(value))
+        .ok_or(ProbeError::AccountUnavailable)?
+        .to_owned();
+    let mut metadata = Vec::new();
+    for key in ["email", "planType"] {
         let field = match account.get(key) {
             None | Some(Value::Null) => None,
-            Some(Value::String(value))
-                if !value.is_empty()
-                    && value.len() <= 512
-                    && !value.chars().any(char::is_control) =>
-            {
-                Some(value.clone())
-            }
+            Some(Value::String(value)) if valid_identity_field(value) => Some(value.clone()),
             _ => return Err(ProbeError::AccountUnavailable),
         };
-        identity.push(field);
+        metadata.push(field);
     }
-    if identity[..3].iter().all(Option::is_none) {
-        return Err(ProbeError::AccountUnavailable);
-    }
-    Ok(identity)
+    Ok(AccountIdentity {
+        workspace_id,
+        email: metadata.remove(0),
+        plan_type: metadata.remove(0),
+    })
 }

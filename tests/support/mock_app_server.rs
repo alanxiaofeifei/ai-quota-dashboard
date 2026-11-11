@@ -39,15 +39,14 @@ fn expect(reader: &mut impl BufRead, method: &str, id: Option<u64>) -> io::Resul
 }
 
 fn account(id: u64, changed: bool) -> Value {
-    let (account_id, email) = if changed {
-        ("synthetic-account-b", "synthetic-b@example.invalid")
+    let account_id = if changed {
+        "synthetic-workspace-b"
     } else {
-        ("synthetic-account-a", "synthetic-a@example.invalid")
+        "synthetic-workspace-a"
     };
     json!({"id": id, "result": {"account": {
-        "type": "chatgpt", "accountId": account_id,
-        "email": email, "planType": "plus"
-    }, "requiresOpenaiAuth": true}})
+        "type": "chatgpt", "email": "synthetic@example.invalid", "planType": "plus"
+    }, "workspaceRouting":{"chatgptAccountId":account_id}, "requiresOpenaiAuth": true}})
 }
 
 fn main() -> io::Result<()> {
@@ -145,6 +144,13 @@ fn main() -> io::Result<()> {
             emit(&json!({"id":2,"result":{"account":{"type":"chatgpt","planType":"plus"}}}))?;
             return Ok(());
         }
+        "email_without_workspace" => {
+            emit(&json!({"id":2,"result":{"account":{
+                "type":"chatgpt","email":"synthetic@example.invalid","planType":"plus",
+                "accountId":"synthetic-unpublished-account-field"
+            }}}))?;
+            return Ok(());
+        }
         _ => emit(&account(2, false))?,
     }
 
@@ -158,13 +164,23 @@ fn main() -> io::Result<()> {
         emit(&json!({"id":3,"error":{"code":401,"message":SECRET}}))?;
         return Ok(());
     }
-    emit(&json!({"id":3,"result":{
+    let quota_account_id = if scenario == "quota_account_mismatch" {
+        "synthetic-workspace-other"
+    } else {
+        "synthetic-workspace-a"
+    };
+    let mut quota = json!({"id":3,"result":{
+        "accountId":quota_account_id,
         "ordinaryUsageAllowed":true,
         "rateLimitsByLimitId":{"codex":{
             "limitId":"codex",
             "primary":{"usedPercent":25,"windowDurationMins":300,"resetsAt":1893456000}
         }}
-    }}))?;
+    }});
+    if scenario == "quota_without_account_id" {
+        quota["result"].as_object_mut().unwrap().remove("accountId");
+    }
+    emit(&quota)?;
 
     expect(&mut reader, "account/read", Some(4))?;
     emit(&account(4, scenario == "account_switch"))?;

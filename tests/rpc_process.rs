@@ -31,6 +31,7 @@ fn report(scenario: &str) -> Value {
         SECRET,
         "example.invalid",
         "synthetic-account",
+        "synthetic-workspace",
         "accessToken",
     ] {
         assert!(!serialized.contains(forbidden), "report leaked {forbidden}");
@@ -82,7 +83,25 @@ fn rejects_an_account_without_a_stable_identity() {
 
 #[test]
 fn discards_quota_when_the_active_account_changes() {
+    // Both account/read payloads deliberately retain the same email and plan;
+    // the changed top-level workspaceRouting ID must still invalidate the data.
     assert_safe_error("account_switch");
+}
+
+#[test]
+fn rejects_email_without_a_verified_workspace_routing_identity() {
+    assert_safe_error("email_without_workspace");
+}
+
+#[test]
+fn rejects_quota_account_id_that_differs_from_the_selected_workspace() {
+    assert_safe_error("quota_account_mismatch");
+}
+
+#[test]
+fn legacy_quota_without_account_id_still_requires_stable_workspace_reads() {
+    let report = report("quota_without_account_id");
+    assert_eq!(report["buckets"][0]["primary"]["used_percent"], 25.0);
 }
 
 #[test]

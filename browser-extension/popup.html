@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="zh-Hans">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>额度网页验证</title>
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <header><span class="tag">阶段 0 · 实验</span><h1>额度网页验证</h1></header>
+  <p>先在官方 Usage 页面手动刷新，再选中 <strong>Weekly limit</strong> 到 <strong>Credits</strong> 的额度文字，然后点击读取。</p>
+  <p class="muted">仅读取你选中的文字。不会读取全页、聊天、Cookie 或登录信息，也不会上传摘要。</p>
+  <button id="read" type="button">读取已选额度区域</button>
+  <p id="status" role="status" aria-live="polite">尚未读取任何数据。</p>
+  <section id="result" hidden aria-label="额度摘要">
+    <dl>
+      <dt>周额度剩余</dt><dd id="remaining">暂不可用</dd>
+      <dt>页面重置提示</dt><dd id="reset">未知</dd>
+      <dt>订阅 credits</dt><dd id="credits">未知</dd>
+      <dt>网页读取时间</dt><dd id="read-time">未知</dd>
+      <dt>服务端更新时间</dt><dd>未知</dd>
+    </dl>
+    <p class="notice">重置提示只是页面显示的估计。未确认账户归属、共享范围和服务端数据新鲜度；到点不代表已恢复。</p>
+    <button id="download" type="button">下载本地摘要 JSON</button>
+  </section>
+  <footer>仅用于前台读取验证，不是后台自动采集。</footer>
+  <script type="module" src="popup.js"></script>
+</body>
+</html>

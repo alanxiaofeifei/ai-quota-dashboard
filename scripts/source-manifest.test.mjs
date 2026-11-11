@@ -43,6 +43,7 @@ test('deterministic manifest includes functional source, locks, build scripts an
     'scripts/build.mjs': 'build', 'scripts/build/package.mjs': 'nested build script',
     'src/build/logic.rs': 'source module', '.github/workflows/ci.yml': 'ci',
     'web/src/index.ts': 'web', 'site/worker/index.js': 'server',
+    'browser-extension/manifest.json': '{}', 'browser-extension/popup.js': 'extension',
     'shared/contract.ts': 'contract', 'package.json': '{}', 'pnpm-lock.yaml': 'lock',
     'vite.config.ts': 'config', 'docs/notes.md': 'documentation',
     'README.md': 'readme', '.openai/hosting.json': 'private deployment identity',
@@ -51,7 +52,7 @@ test('deterministic manifest includes functional source, locks, build scripts an
   const first = await buildManifest(root);
   assert.deepEqual(await buildManifest(root), first);
   const paths = first.files.map(file => file.path);
-  for (const included of ['Cargo.lock', 'rust-toolchain.toml', '.github/workflows/ci.yml', 'site/worker/index.js', 'shared/contract.ts', 'pnpm-lock.yaml', 'scripts/build/package.mjs', 'src/build/logic.rs']) assert.ok(paths.includes(included));
+  for (const included of ['Cargo.lock', 'rust-toolchain.toml', '.github/workflows/ci.yml', 'site/worker/index.js', 'shared/contract.ts', 'pnpm-lock.yaml', 'scripts/build/package.mjs', 'src/build/logic.rs', 'browser-extension/manifest.json', 'browser-extension/popup.js']) assert.ok(paths.includes(included));
   for (const excluded of ['docs/notes.md', 'README.md', '.openai/hosting.json', 'reports/private.json', 'web/dist/index.html']) assert.ok(!paths.includes(excluded));
   assert.equal(first.files.find(file => file.path === 'src/main.rs').sha256, hash('rust'));
   assert.equal(first.functional_source_sha256, hash(JSON.stringify(first.files)));

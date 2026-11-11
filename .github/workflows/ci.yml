@@ -21,10 +21,28 @@ jobs:
       - run: cargo test --locked
       - run: cargo test --locked --all-features
       - run: node --test scripts/source-manifest.test.mjs
+      - run: node --test tests/usage-selection.test.mjs
+      - run: python -m unittest discover -s scripts -p test_codex_unauthenticated_smoke.py
+      - name: Windows command discovery diagnostics tests
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: ./tests/windows-cli-diagnostics.Tests.ps1
+      - name: Verify mirrored core source when a backup manifest is present
+        shell: bash
+        run: |
+          if [ -f core-backup.json ]; then
+            node scripts/source-manifest.mjs --verify core-backup.json
+          fi
       - run: cargo build --locked --release --bin ai-quota-preflight
       - run: cargo run --locked --bin ai-quota-preflight -- doctor
       - uses: actions/upload-artifact@v4
         with:
           name: ai-quota-preflight-${{ runner.os }}
           path: target/release/ai-quota-preflight${{ runner.os == 'Windows' && '.exe' || '' }}
+          if-no-files-found: error
+      - uses: actions/upload-artifact@v4
+        if: runner.os == 'Linux'
+        with:
+          name: quota-usage-selection-validator
+          path: browser-extension/
           if-no-files-found: error
