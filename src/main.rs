@@ -141,11 +141,12 @@ fn options<'a>(
     args: &'a [String],
     allowed: &[&str],
 ) -> Result<BTreeMap<&'a str, &'a str>, (i32, &'static str)> {
-    if args.len() % 2 != 0 {
+    let (pairs, remainder) = args.as_chunks::<2>();
+    if !remainder.is_empty() {
         return Err((2, "invalid_arguments"));
     }
     let mut result = BTreeMap::new();
-    for pair in args.chunks_exact(2) {
+    for pair in pairs {
         if !allowed.contains(&pair[0].as_str())
             || pair[1].is_empty()
             || result.insert(pair[0].as_str(), pair[1].as_str()).is_some()
