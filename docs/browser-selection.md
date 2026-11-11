@@ -4,11 +4,11 @@
 
 ## 在 Chrome／Edge 桌面版试用
 
-1. 下载当前 GitHub Actions 的 `quota-usage-selection-validator` 产物并解压，或从源码中找到 `browser-extension` 目录。
-2. 打开 `chrome://extensions` 或 `edge://extensions`，启用开发者模式，选择“加载已解压的扩展”，定位到含 `manifest.json` 的目录。
+1. 新版 Windows 看板包已附 `browser-extension` 子目录；也可下载独立的 `quota-usage-selection-validator` 产物并解压，或从源码中找到 `browser-extension`。
+2. 打开 `chrome://extensions` 或 `edge://extensions`，启用开发者模式，选择“加载已解压的扩展”。看板包请选择 `browser-extension` 子目录，独立扩展包请选择解压后直接包含 `popup.html` 和扩展 `manifest.json` 的目录。不要选择 exe 根目录。已安装旧扩展时需重新加载或从新版目录安装。
 3. 在你已经登录的浏览器打开 [Usage](https://chatgpt.com/settings/usage?tab=overview)。旧的 Codex Usage 地址可能跳回首页；首页不会被读取。
 4. 手动刷新官方页面，再选中 Weekly limit 与 Credits 相关区域文字，然后点击扩展图标并选择读取。
-5. 对照原页面检查结果；需要时可主动下载白名单 JSON 摘要，作为本地验证记录。不要把真实摘要提交到源码仓库。
+5. 对照原页面检查结果。点击“复制摘要”，回到看板点击“粘贴摘要”，按 Ctrl+V 并确认导入；若浏览器拒绝直接复制，使用扩展提供的只读文本框手动 Ctrl+C。也可下载 JSON 后导入。不要把真实摘要提交到源码仓库。
 
 无法打开、跳转到登录／首页、未选择文字、字段缺失或有歧义时，显示不可用，不回退到抓取整页，也不显示零或满额。
 
@@ -17,6 +17,15 @@
 只申请 `activeTab` 和 `scripting`，不申请 Cookie、全站点、后台内容脚本或存储权限。每次执行重新核对精确 Usage 路径，不能沿着同 origin 的 SPA 导航读取聊天。
 
 原始选中文字只在本次处理的内存中使用，不存储、打印或上传。下载只包含已识别的额度字段，不含邮箱、完整页面、聊天或认证信息。账户归属仍为空，不能自动贴到某个已存账户。
+
+“复制摘要”仅在用户点击时写入已投影的白名单 JSON，不读取剪贴板，也没有新增剪贴板权限；失败时提供手动复制文本。浏览器禁止复制不会变成采集失败或零额度。
+
+## 常见问题
+
+- **加载失败：Required value 'name' is missing or invalid**：若选中了旧版 exe 包根目录，Chrome 读到的是许可证清单，而非扩展清单。新版将许可清单改名为 `THIRD_PARTY_MANIFEST.json`；加载包内 `browser-extension` 子目录。
+- **看板打开后没有数据**：先创建账户别名，再导入扩展生成的摘要；账户别名不是平台登录入口。
+- **credits 未知**：选区没有包含余额数字或页面没有提供。重新选择 Credits 标题下的数字余额后读取，不能据此推定余额为零。
+- **数据过期**：重新刷新官方页、读取和导入；重载本机记录不会重新查询平台，重新导入同一份旧文件也不会让它变新。
 
 ## 核对含义
 

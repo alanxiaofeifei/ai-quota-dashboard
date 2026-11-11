@@ -8,7 +8,7 @@
 </head>
 <body>
   <header><span class="tag">阶段 0 · 实验</span><h1>额度网页验证</h1></header>
-  <p>先在官方 Usage 页面手动刷新，再选中 <strong>Weekly limit</strong> 到 <strong>Credits</strong> 的额度文字，然后点击读取。</p>
+  <p>先在官方 Usage 页面手动刷新，再选中 <strong>Weekly limit</strong> 的比例、重置提示，以及 <strong>Credits</strong> 下的 <strong>数字 credits remaining</strong> 余额，然后点击读取。只选中 Credits 标题不能取得余额。</p>
   <p class="muted">仅读取你选中的文字。不会读取全页、聊天、Cookie 或登录信息，也不会上传摘要。</p>
   <button id="read" type="button">读取已选额度区域</button>
   <p id="status" role="status" aria-live="polite">尚未读取任何数据。</p>
@@ -21,7 +21,16 @@
       <dt>服务端更新时间</dt><dd>未知</dd>
     </dl>
     <p class="notice">重置提示只是页面显示的估计。未确认账户归属、共享范围和服务端数据新鲜度；到点不代表已恢复。</p>
-    <button id="download" type="button">下载本地摘要 JSON</button>
+    <div class="actions">
+      <button id="copy" type="button" disabled>复制摘要</button>
+      <button id="download" class="secondary" type="button" disabled>下载摘要 JSON</button>
+    </div>
+    <p id="copy-status" role="status" aria-live="polite">核对无误后复制，回到本地看板选择账户，再点击“粘贴摘要”。</p>
+    <div id="manual-copy" hidden>
+      <label for="summary-text">浏览器未允许直接复制。请在下框按 Ctrl+C 手动复制：</label>
+      <textarea id="summary-text" rows="7" readonly spellcheck="false" aria-describedby="manual-copy-help"></textarea>
+      <p id="manual-copy-help" class="muted">这里只包含已识别的额度摘要，不包含原始选中文字。也可使用“下载摘要 JSON”再导入。</p>
+    </div>
   </section>
   <footer>仅用于前台读取验证，不是后台自动采集。</footer>
   <script type="module" src="popup.js"></script>

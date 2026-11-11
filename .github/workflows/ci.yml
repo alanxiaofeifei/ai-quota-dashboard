@@ -24,8 +24,9 @@ jobs:
       - run: cargo test --locked
       - run: cargo test --locked --all-features
       - run: node --test scripts/source-manifest.test.mjs
-      - run: node --test tests/usage-selection.test.mjs
+      - run: node --test tests/usage-selection.test.mjs tests/popup-copy.test.mjs
       - run: python -m unittest discover -s scripts -p test_codex_unauthenticated_smoke.py
+      - run: python -m unittest discover -s scripts -p test_package_portable.py
       - name: Windows command discovery diagnostics tests
         if: runner.os == 'Windows'
         shell: pwsh
@@ -46,38 +47,20 @@ jobs:
           cargo fetch --locked
           python scripts/package-notices.py --output dist/package-notices
           node scripts/source-manifest.mjs > dist/source-manifest.json
-          python - <<'PY'
-          import hashlib
-          import pathlib
-          import shutil
-          import sys
-
-          suffix = '.exe' if sys.platform == 'win32' else ''
-          for name in ('ai-quota-preflight', 'ai-quota-dashboard'):
-              destination = pathlib.Path('dist') / name
-              shutil.copytree('dist/package-notices', destination)
-              binary = pathlib.Path('target/release') / (name + suffix)
-              shutil.copy2(binary, destination)
-              shutil.copy2('dist/source-manifest.json', destination / 'SOURCE_MANIFEST.json')
-              digest = hashlib.sha256(binary.read_bytes()).hexdigest()
-              (destination / 'SHA256SUMS').write_text(f'{digest}  {binary.name}\n', encoding='utf-8')
-          extension = pathlib.Path('dist/quota-usage-selection-validator')
-          shutil.copytree('browser-extension', extension)
-          shutil.copy2('LICENSE', extension / 'LICENSE')
-          PY
+          python scripts/package-portable.py --notices dist/package-notices --source-manifest dist/source-manifest.json --output dist/packages
       - uses: actions/upload-artifact@v4
         with:
           name: ai-quota-preflight-${{ runner.os }}
-          path: dist/ai-quota-preflight/
+          path: dist/packages/ai-quota-preflight/
           if-no-files-found: error
       - uses: actions/upload-artifact@v4
         if: runner.os == 'Linux'
         with:
           name: quota-usage-selection-validator
-          path: dist/quota-usage-selection-validator/
+          path: dist/packages/quota-usage-selection-validator/
           if-no-files-found: error
       - uses: actions/upload-artifact@v4
         with:
           name: ai-quota-dashboard-${{ runner.os }}
-          path: dist/ai-quota-dashboard/
+          path: dist/packages/ai-quota-dashboard/
           if-no-files-found: error

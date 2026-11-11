@@ -7,6 +7,11 @@ p { font-size: 13px; line-height: 1.65; }
 button { border: 0; border-radius: 8px; background: #15594e; color: white; padding: 11px 14px; font: inherit; font-size: 13px; cursor: pointer; }
 button:disabled { opacity: .6; cursor: wait; }
 button:focus-visible { outline: 3px solid #5299d6; outline-offset: 3px; }
+.actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.secondary { color: #15594e; background: #e6f0ed; }
+#copy-status, #manual-copy label { font-size: 12px; line-height: 1.6; }
+textarea { display: block; box-sizing: border-box; width: 100%; margin-top: 8px; padding: 8px; resize: vertical; border: 1px solid #a6b6c5; border-radius: 6px; color: inherit; background: inherit; font: 11px/1.5 ui-monospace, monospace; }
+textarea:focus-visible { outline: 3px solid #5299d6; outline-offset: 2px; }
 #status { min-height: 24px; }
 section { background: white; border: 1px solid #d9e1e9; border-radius: 10px; padding: 14px; }
 dl { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; font-size: 13px; margin: 0; }
@@ -20,4 +25,5 @@ footer { margin-top: 16px; }
   .muted, footer, dt { color: #abb9c6; }
   .tag { color: #b4e2d8; background: #234940; }
   .notice { color: #e0c586; }
+  .secondary { color: #b4e2d8; background: #234940; }
 }

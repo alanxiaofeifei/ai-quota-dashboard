@@ -1,11 +1,12 @@
 import { useEffect, useRef, useState, type FormEvent, type KeyboardEvent, type ReactNode } from 'react';
 import { api, ApiError, localSession, safeErrorMessage } from './api';
 import { captureState, deviceTimeZone, estimatedReset, formatCredits, formatPercent, formatTimestamp } from './format';
+import { isProgramManifestFilename, parseSummaryText } from './import';
 import type { Account, Snapshot } from './types';
 
 const USAGE_URL = 'https://chatgpt.com/settings/usage?tab=overview';
 type Notice = { kind: 'success' | 'error'; text: string } | null;
-type Modal = 'create' | 'delete' | null;
+type Modal = 'create' | 'delete' | 'paste' | null;
 type IconName = 'grid' | 'source' | 'layers' | 'refresh' | 'import' | 'plus' | 'lock' | 'arrow' | 'close';
 
 function Icon({ name, size = 16 }: { name: IconName; size?: number }) {
@@ -29,7 +30,7 @@ function ModalPanel({ title, children, onClose }: { title: string; children: Rea
     const previous = document.activeElement;
     const overflow = document.body.style.overflow;
     document.body.style.overflow = 'hidden';
-    panel.current?.querySelector<HTMLElement>('input, button')?.focus();
+    (panel.current?.querySelector<HTMLElement>('input, textarea') ?? panel.current?.querySelector<HTMLElement>('button'))?.focus();
     return () => {
       document.body.style.overflow = overflow;
       if (previous instanceof HTMLElement && previous.isConnected) previous.focus();
@@ -38,7 +39,7 @@ function ModalPanel({ title, children, onClose }: { title: string; children: Rea
   function onKeyDown(event: KeyboardEvent<HTMLElement>) {
     if (event.key === 'Escape') { event.preventDefault(); onClose(); }
     if (event.key !== 'Tab') return;
-    const focusable = [...(panel.current?.querySelectorAll<HTMLElement>('input, button, a[href]') ?? [])]
+    const focusable = [...(panel.current?.querySelectorAll<HTMLElement>('input, textarea, button, a[href]') ?? [])]
       .filter(element => !element.hasAttribute('disabled'));
     const first = focusable[0], last = focusable.at(-1);
     if (!first || !last) return;
@@ -73,11 +74,13 @@ function ObservationCards({ snapshot, now, timeZone }: { snapshot: Snapshot; now
         <div className="meta-item"><span className="meta-label">页面读取时间</span><span className="meta-value">{formatTimestamp(observation.page_read_at, timeZone)}</span></div>
         <div className="meta-item"><span className="meta-label">重置提示 · 估计</span><span className="meta-value">{reset.text}</span></div>
       </div>
+      {attention && <div className="read-again-callout"><p>这份摘要需要重新核对。打开官方页面刷新，用扩展重新读取，再将新摘要粘贴或导入到当前账户。</p><a href={USAGE_URL} target="_blank" rel="noopener noreferrer">打开 Usage 重新读取 <Icon name="arrow" size={13}/></a></div>}
     </section>
     <section className="credits-card" aria-labelledby="credits-title">
       <div className="credits-top"><h2 id="credits-title">订阅 credits</h2><span className="pill muted">独立余额</span></div>
       <p className="credits-balance">{formatCredits(observation.credits_balance)}</p>
       <div className="credits-unit">{observation.credits_balance === null ? '页面未提供或未选中' : 'credits · 最近观测余额'}</div>
+      {observation.credits_balance === null && <div className="credits-help"><p>要补充余额，请在 Usage 页面同时选中 <strong>Credits</strong> 和余额，再用扩展读取并导入新摘要。页面没有提供余额时继续保留未知。</p><a href={USAGE_URL} target="_blank" rel="noopener noreferrer">打开 Usage 查看 Credits <Icon name="arrow" size={13}/></a></div>}
       <p className="credits-description">用于符合条件的额外使用。余额为零时，周额度仍按左侧记录单独显示。</p>
       <p className="card-note">订阅 credits 按原单位保留，不换算成 API 余额或美元。</p>
     </section>
@@ -95,6 +98,9 @@ export function App({ sessionReady }: { sessionReady: Promise<void> }) {
   const [notice, setNotice] = useState<Notice>(null);
   const [modal, setModal] = useState<Modal>(null);
   const [label, setLabel] = useState('');
+  const [helpOpen, setHelpOpen] = useState(false);
+  const [pasteText, setPasteText] = useState('');
+  const [pasteError, setPasteError] = useState<string | null>(null);
   const [now, setNow] = useState(Date.now());
   const [timeZone, setTimeZone] = useState('Asia/Taipei');
   const fileInput = useRef<HTMLInputElement>(null);
@@ -132,8 +138,11 @@ export function App({ sessionReady }: { sessionReady: Promise<void> }) {
   }, [sessionReady]);
 
   useEffect(() => {
-    const timer = setInterval(() => setNow(Date.now()), 30000);
-    return () => clearInterval(timer);
+    const update = () => setNow(Date.now());
+    const timer = setInterval(update, 30000);
+    window.addEventListener('focus', update);
+    document.addEventListener('visibilitychange', update);
+    return () => { clearInterval(timer); window.removeEventListener('focus', update); document.removeEventListener('visibilitychange', update); };
   }, []);
 
   async function createAccount(event: FormEvent) {
@@ -165,18 +174,33 @@ export function App({ sessionReady }: { sessionReady: Promise<void> }) {
     const id = activeAccount.id;
     setBusy('import'); setNotice(null);
     try {
-      if (file.size > 32 * 1024) throw new ApiError(400, 'body_too_large');
       const name = file.name.toLowerCase();
       if (['auth.json', 'cookies', 'cookies.sqlite', 'login data'].includes(name) || name.startsWith('.env')) {
         throw new ApiError(400, 'invalid_report');
       }
-      let report: unknown;
-      try { report = JSON.parse(await file.text()); }
-      catch { throw new ApiError(400, 'invalid_json'); }
+      if (isProgramManifestFilename(name)) throw new ApiError(400, 'not_quota_summary');
+      if (file.size > 32 * 1024) throw new ApiError(400, 'body_too_large');
+      const report = parseSummaryText(await file.text());
       await api.importSnapshot(id, report); await reload(id);
       setNotice({ kind: 'success', text: '网页摘要已保存到当前本地账户。读取时间保持原值。' });
     } catch (error) { failure(error); }
     finally { if (fileInput.current) fileInput.current.value = ''; setBusy(null); }
+  }
+
+  function openPaste() { setPasteText(''); setPasteError(null); setModal('paste'); }
+
+  async function pasteSummary(event: FormEvent) {
+    event.preventDefault();
+    if (!activeAccount || busy) return;
+    const id = activeAccount.id;
+    setBusy('paste'); setPasteError(null); setNotice(null);
+    try {
+      const report = parseSummaryText(pasteText);
+      await api.importSnapshot(id, report); await reload(id);
+      setModal(null);
+      setNotice({ kind: 'success', text: '网页摘要已保存到当前本地账户。读取时间保持原值。' });
+    } catch (error) { setPasteError(safeErrorMessage(error)); if (error instanceof ApiError && error.status === 401) failure(error); }
+    finally { setPasteText(''); setBusy(null); }
   }
 
   async function lock() {
@@ -187,7 +211,7 @@ export function App({ sessionReady }: { sessionReady: Promise<void> }) {
     finally { setExpired(true); setAccounts([]); setSnapshots([]); setActiveId(''); setBusy(null); }
   }
 
-  function closeModal() { if (!busy) setModal(null); }
+  function closeModal() { if (!busy) { setModal(null); setPasteText(''); setPasteError(null); } }
 
   return <>
     <div className="app-shell" inert={modal !== null}>
@@ -215,6 +239,7 @@ export function App({ sessionReady }: { sessionReady: Promise<void> }) {
           </div>
         </header>
         <section className="intro"><h1>每一份额度，都看得清。</h1><p>查看最近读到的订阅额度，并保留它的来源与时间。</p></section>
+        <div className="local-mode-note"><span><strong>本机网站</strong> · 由你打开的程序运行，浏览器扩展负责读取官方页面。</span><a href="#usage-help" onClick={() => setHelpOpen(true)}>使用帮助</a></div>
         {notice && <div className={`status-banner ${notice.kind}`} role={notice.kind === 'error' ? 'alert' : 'status'}>{notice.text}</div>}
         {expired ? <section className="session-state"><h2>本地看板已锁定</h2><p>此窗口的授权已结束。请从本机程序重新打开已授权的看板窗口。</p><p>这不表示你的 AI 平台登录已经过期。</p></section> : <>
           <div className="workspace-toolbar">
@@ -223,22 +248,25 @@ export function App({ sessionReady }: { sessionReady: Promise<void> }) {
                 {accounts.length === 0 && <option value="">尚未添加账户</option>}
                 {accounts.map(account => <option key={account.id} value={account.id}>{account.label}</option>)}
               </select>
-              <button className="button quiet" type="button" disabled={disabled} onClick={() => { setLabel(''); setModal('create'); }} aria-label="添加本地账户" title="添加本地账户"><Icon name="plus"/></button>
+              <button className="button secondary" type="button" disabled={disabled} onClick={() => { setLabel(''); setModal('create'); }}><Icon name="plus"/>添加本地账户</button>
             </div>
             <div className="toolbar-actions">
-              <button className="button secondary" type="button" disabled={disabled} onClick={async () => { setNotice(null); try { await reload(); } catch (error) { failure(error); } }}><Icon name="refresh"/>{fetching ? '正在读取…' : '刷新本地摘要'}</button>
+              <button className="button quiet" type="button" disabled={disabled} title="只重新载入本机已经保存的记录，不查询 AI 平台" onClick={async () => { setNotice(null); try { await reload(); } catch (error) { failure(error); } }}><Icon name="refresh"/>{fetching ? '正在载入…' : '重载本机记录'}</button>
+              <button className="button secondary" type="button" disabled={disabled || !activeAccount} onClick={openPaste}>粘贴摘要</button>
               <button className="button primary" type="button" disabled={disabled || !activeAccount} onClick={() => fileInput.current?.click()}><Icon name="import"/>{busy === 'import' ? '正在导入…' : '导入网页摘要'}</button>
               <input ref={fileInput} className="screenreader-only" tabIndex={-1} type="file" accept="application/json,.json" aria-label="选择网页摘要 JSON" onChange={event => { void importFile(event.target.files?.[0]); }}/>
             </div>
           </div>
           {loading ? <div className="loading-card" role="status">正在读取本地摘要…</div> : snapshot ? <ObservationCards snapshot={snapshot} now={now} timeZone={timeZone}/> : <section className="empty-state">
             <div className="empty-orbit" aria-hidden="true"><Icon name="layers" size={29}/></div>
-            <h2 className="empty-title">{activeAccount ? '这个账户还没有额度摘要' : '先留一个位置，给你的额度'}</h2>
-            <p className="empty-copy">{activeAccount ? '在官方 Usage 页面使用读取工具，核对结果后下载摘要，再导入到这里。' : '添加一个本地账户名称，再导入已经核对的网页摘要。没有数据时，这里保持未知。'}</p>
-            <div className="empty-actions">
-              {activeAccount ? <button className="button primary" type="button" onClick={() => fileInput.current?.click()} disabled={disabled}><Icon name="import"/>导入第一份摘要</button> : <button className="button primary" type="button" onClick={() => { setLabel(''); setModal('create'); }} disabled={disabled}><Icon name="plus"/>添加本地账户</button>}
-              <a className="button secondary" href={USAGE_URL} target="_blank" rel="noopener noreferrer">打开官方 Usage<Icon name="arrow" size={13}/></a>
-            </div>
+            <h2 className="empty-title">三步，把额度带到本地看板</h2>
+            <p className="empty-copy">数据由你主动读取。尚未导入时，额度保持未知。</p>
+            <ol className="setup-steps">
+              <li><span className="step-number">1</span><h3>创建本地账户别名</h3><p>取一个方便辨认的名字，用于区分导入的记录；这里不登录 AI 平台。</p>{activeAccount ? <span className="step-done">已创建并选中账户</span> : <button className="button primary" type="button" onClick={() => { setLabel(''); setModal('create'); }} disabled={disabled}><Icon name="plus"/>添加本地账户</button>}</li>
+              <li><span className="step-number">2</span><h3>读取官方 Usage 页面</h3><p>刷新页面，选中 <strong>Weekly limit</strong> 的比例、重置提示和 <strong>Credits</strong> 余额，点击读取扩展，再复制或下载摘要。</p><a className="button secondary" href={USAGE_URL} target="_blank" rel="noopener noreferrer">打开官方 Usage<Icon name="arrow" size={13}/></a></li>
+              <li><span className="step-number">3</span><h3>将摘要保存到所选账户</h3><p>回到此页粘贴扩展复制的摘要，或选择扩展下载的 JSON 文件。下次更新也按第 2、3 步进行。</p><div className="step-actions"><button className="button primary" type="button" onClick={openPaste} disabled={disabled || !activeAccount}>粘贴摘要</button><button className="button secondary" type="button" onClick={() => fileInput.current?.click()} disabled={disabled || !activeAccount}>导入文件</button></div></li>
+            </ol>
+            <a href="#usage-help" onClick={() => setHelpOpen(true)}>安装扩展或操作遇到问题？查看使用帮助</a>
           </section>}
 
           <section id="sources" aria-labelledby="source-title">
@@ -255,6 +283,15 @@ export function App({ sessionReady }: { sessionReady: Promise<void> }) {
           </section>
         </>}
 
+        <details id="usage-help" className="usage-help" open={helpOpen} onToggle={event => setHelpOpen(event.currentTarget.open)}>
+          <summary>使用帮助 · 安装、读取与更新</summary>
+          <div className="help-content">
+            <section><h3>看板网站和扩展各做什么？</h3><p>你正在访问程序提供的本机网站，地址以 <code>127.0.0.1</code> 开头，保留程序窗口即可使用。摘要保存在本机，浏览器扩展只负责在你点击时读取官方 Usage 页的选中文字。当前版本不会后台查询平台，也未提供跨设备同步。</p></section>
+            <section><h3>Chrome／Edge 应加载哪个目录？</h3><p>在扩展管理页开启开发者模式，选择“加载已解压的扩展程序”，再选择下载包中的 <code>browser-extension</code> 子目录。正确目录里有 <code>manifest.json</code> 和 <code>popup.html</code>；看板可执行文件所在的根目录用于启动程序。</p><p>如果提示缺少扩展名称或无法加载 manifest，请取消后重新选择 <code>browser-extension</code>，不要修改程序的许可或源码清单。已安装可正常读取的扩展可以继续使用。</p></section>
+            <section><h3>如何更新、为什么 Credits 显示未知？</h3><p>在官方 Usage 页手动刷新，选中 Weekly limit 的剩余比例、重置提示以及 Credits 的余额，然后点击扩展读取并复制或下载摘要。选择此页对应的本地账户，再粘贴或导入。未选中或页面未提供的余额保持未知，不能当作零。</p><p>“重载本机记录”只读取本机已保存的数据。超过 15 分钟的摘要会标为过期；预计重置到点也需要重新读取，不能据此认定额度已恢复。</p></section>
+          </div>
+        </details>
+
         <section id="platforms" aria-labelledby="platform-title">
           <div className="section-heading"><h2 id="platform-title">更多平台</h2><p>逐一核实，逐步接入</p></div>
           <div className="platform-grid">
@@ -267,7 +304,10 @@ export function App({ sessionReady }: { sessionReady: Promise<void> }) {
       </main>
     </div>
     {modal === 'create' && <ModalPanel title="添加本地账户" onClose={closeModal}>
-      <form onSubmit={createAccount}><div className="field"><label className="field-label" htmlFor="account-label">账户名称</label><input id="account-label" className="input" value={label} onChange={event => setLabel(event.target.value)} maxLength={40} placeholder="例如：个人账户" autoComplete="off" required disabled={busy !== null}/><p className="field-help">这个名称只保存在本机。导入时由你确认对应的账户。</p></div><div className="modal-actions"><button className="button secondary" type="button" onClick={closeModal} disabled={busy !== null}>取消</button><button className="button primary" type="submit" disabled={busy !== null || !label.trim()}>{busy === 'create' ? '正在添加…' : '添加账户'}</button></div></form>
+      <form onSubmit={createAccount}><div className="field"><label className="field-label" htmlFor="account-label">本地账户别名</label><input id="account-label" className="input" value={label} onChange={event => setLabel(event.target.value)} maxLength={40} placeholder="例如：个人账户" autoComplete="off" required disabled={busy !== null}/><p className="field-help">取一个方便辨认的名字，无需密码或平台登录。导入时由你确认摘要属于哪个账户。</p></div><div className="modal-actions"><button className="button secondary" type="button" onClick={closeModal} disabled={busy !== null}>取消</button><button className="button primary" type="submit" disabled={busy !== null || !label.trim()}>{busy === 'create' ? '正在添加…' : '添加账户'}</button></div></form>
+    </ModalPanel>}
+    {modal === 'paste' && activeAccount && <ModalPanel title="粘贴网页摘要" onClose={closeModal}>
+      <form onSubmit={pasteSummary}><p className="paste-destination">保存到本地账户：<strong>{activeAccount.label}</strong></p><div className="field"><label className="field-label" htmlFor="summary-text">扩展复制的摘要 JSON</label><textarea id="summary-text" className="input summary-textarea" value={pasteText} onChange={event => { setPasteText(event.target.value); setPasteError(null); }} maxLength={32769} autoComplete="off" spellCheck={false} placeholder="在这里按 Ctrl+V 粘贴扩展复制的摘要" required disabled={busy !== null}/><p className="field-help">仅粘贴读取扩展生成的额度摘要，最多 32 KiB。此页不会自动读取剪贴板；不要粘贴 Cookie、令牌或聊天内容。</p></div>{pasteError && <p className="paste-error" role="alert">{pasteError}</p>}<div className="modal-actions"><button className="button secondary" type="button" onClick={closeModal} disabled={busy !== null}>取消</button><button className="button primary" type="submit" disabled={busy !== null || !pasteText.trim()}>{busy === 'paste' ? '正在保存…' : '保存摘要'}</button></div></form>
     </ModalPanel>}
     {modal === 'delete' && activeAccount && <ModalPanel title="删除本地账户" onClose={closeModal}>
       <p>将删除「{activeAccount.label}」及其保存在本机的额度摘要。平台账户和订阅不受影响。</p><div className="modal-actions"><button className="button secondary" type="button" onClick={closeModal} disabled={busy !== null}>保留账户</button><button className="button danger" type="button" onClick={deleteAccount} disabled={busy !== null}>{busy === 'delete' ? '正在删除…' : '删除本地记录'}</button></div>

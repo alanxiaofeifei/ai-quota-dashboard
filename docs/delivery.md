@@ -10,6 +10,17 @@
 
 阶段 0 的判断仍以[验收清单](phase-0.md)为准。GitHub 仓库、离线解析器或测试通过，不能替代真实自动采集验证，也不能提前把演示数据作为在线个人额度。
 
+## 本机网站、扩展与在线站点
+
+| 组件 | 当前作用 |
+| --- | --- |
+| 本机 `127.0.0.1` 网站 | 由 Windows 程序提供界面和本地存储；不是公网网址，程序退出后停止 |
+| `browser-extension/` | 用户点击后读取官方页面选中的额度文字，生成可复制或下载的摘要 |
+| GitHub 主仓与私有备份 | 保留可迁移源码及来源指纹，不保存个人额度或平台凭据 |
+| ChatGPT Sites 私人站点 | 用户再次确认的个人在线版目标，自动采集门槛通过后才发布；当前尚未部署 |
+
+没有在本项目的交付流程中创建 GitHub Pages。Pages 是[静态托管](https://docs.github.com/en/pages/getting-started-with-github-pages/about-github-pages)，不能直接运行当前 Rust API 与 SQLite；[私有源码仓库也不意味着网站私有](https://docs.github.com/en/pages/getting-started-with-github-pages/creating-a-github-pages-site)。不能把上传静态文件当成已经实现个人在线额度看板。
+
 ## 一份功能源码与可核对的版本
 
 当前主仓交付阶段 0 工具和 Windows 本地只读原型；网页、同源本地 API、SQLite 与构建脚本都保留在 GitHub。尚无后台自动采集或 Sites 部署。后续功能仍先进入公开主仓，再从同一版本生成私有核心备份与部署内容，避免分别维护。

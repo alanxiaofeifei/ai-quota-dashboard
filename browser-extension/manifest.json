@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "AI Quota · 网页选区验证",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "阶段 0 实验工具：用户点击后仅读取官方 Usage 页的已选额度文本，在本机生成摘要。",
   "permissions": ["activeTab", "scripting"],
   "action": {

@@ -165,7 +165,8 @@ export function safeErrorMessage(error: unknown): string {
     case 'future_observation': case 'invalid_read_time': return '摘要读取时间不明确或超前，请检查设备时间后重新读取。';
     case 'invalid_label': case 'invalid_account_label': return '请使用 1–40 个字符作为本地账户名称。';
     case 'account_not_found': return '这个本地账户已不存在，请刷新后重新选择。';
-    case 'body_too_large': case 'request_too_large': return '文件过大，请使用扩展下载的额度摘要。';
+    case 'body_too_large': case 'request_too_large': return '摘要过大，请使用扩展生成的额度摘要，最多 32 KiB。';
+    case 'not_quota_summary': return '这是程序的许可或源码清单。请导入读取扩展下载的额度摘要 JSON，或使用“粘贴摘要”。';
     case 'invalid_report': case 'invalid_browser_report': case 'invalid_json': return '摘要格式不受支持，请使用网页读取工具重新导出。';
     default: return '操作未完成，请稍后重试。';
   }

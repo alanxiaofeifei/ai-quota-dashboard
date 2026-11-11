@@ -206,13 +206,13 @@ def generate(output: Path) -> dict:
         "dependencies": rust_notices(packages, output) + web_notices(output),
         "rust_standard_library": standard_library_notices(output),
     }
-    (output / "manifest.json").write_text(json.dumps(manifest, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    (output / "THIRD_PARTY_MANIFEST.json").write_text(json.dumps(manifest, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
     (output / "THIRD_PARTY_NOTICES.txt").write_text(
         "AI Quota third-party software notices\n\n"
-        "Keep this file, LICENSE, licenses/, manifest.json, and third-party-sources/ "
+        "Keep this file, LICENSE, licenses/, THIRD_PARTY_MANIFEST.json, and third-party-sources/ "
         "alongside the distributed executable. Project MIT licensing applies only "
         "to original project code; third-party code retains its own licenses.\n\n"
-        "manifest.json lists locked package versions, source archive URLs and full "
+        "THIRD_PARTY_MANIFEST.json lists locked package versions, source archive URLs and full "
         "license/notice paths. This is a conservative union for the Linux and Windows "
         "packages, including build/macro notices; not every entry is embedded in every executable.\n\n"
         "The unmodified option-ext 0.2.0 source is included under "
