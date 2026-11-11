@@ -28,6 +28,8 @@ cargo test --locked --features test-support
 
 解析器保留平台的桶和窗口含义，优先使用多桶响应，避免重复计入兼容单桶。缺失比例、窗口或重置时间保持未知；认证错误、空快照和无效响应不会变成零额度。订阅 credits 不标成 API 余额或美元费用；时间到点不推断已经恢复。
 
+`product="codex"` 是查询入口，不代表独占额度池。每桶 `applies_to_products=null` 表示覆盖产品未知；不根据套餐名称、桶名或相同比例推定共享范围，也不自动生成五小时窗口。
+
 当前验证器没有看板或同步服务，不会自动查询网络。测试仅使用合成数据和受控模拟子进程，不能证明官方认证、真实额度、Windows 兼容或平台政策已经通过。
 
 `test-support` 仅为模拟传输测试提供辅助实现；它不会开放 `probe-codex`。正常构建不要启用该功能。
@@ -35,6 +37,7 @@ cargo test --locked --features test-support
 ## 后续验证与文档
 
 - [阶段 0 操作与验收清单](docs/phase-0.md)：进入真实 Windows 验证的前提、观察项目和通过门槛。
+- [Windows 客户端版本确认](docs/windows-preflight.md)：区分应用、CLI 与 App Server 版本，确认已有安装后再验证。
 - [来源与证据状态](docs/evidence.md)：公开文档／源码与实账验证分开登记。
 - [安全边界](docs/security.md)：凭据、进程、日志和后续网络访问的约束。
 - [GitHub 与个人站点交付](docs/delivery.md)：主仓、Sites 发布条件和可执行的源码版本一致性检查。

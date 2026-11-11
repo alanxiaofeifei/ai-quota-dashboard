@@ -17,6 +17,8 @@ const MAX_BUCKETS: usize = 64;
 pub struct QuotaReport {
     pub schema_version: u32,
     pub provider: &'static str,
+    /// The product surface queried by this adapter, not an assertion that the
+    /// returned allowance belongs exclusively to that product.
     pub product: &'static str,
     pub meter_kind: &'static str,
     /// Names the schema contract, not the provenance of this particular input.
@@ -32,6 +34,10 @@ pub struct QuotaBucket {
     /// `None` means the legacy response did not supply an identifier. It must
     /// not be replaced with a guessed product or shared-pool identifier.
     pub limit_id: Option<String>,
+    /// `None` means the covered products are unknown. The published quota
+    /// contract does not provide this metadata; plan names, bucket identifiers,
+    /// and coincidentally equal usage cannot establish a shared-product scope.
+    pub applies_to_products: Option<Vec<String>>,
     pub plan_type: Option<String>,
     pub primary: Option<QuotaWindow>,
     pub secondary: Option<QuotaWindow>,
@@ -188,6 +194,7 @@ fn parse_bucket(value: &Value, map_id: Option<&str>) -> Result<QuotaBucket, Pars
     }
     Ok(QuotaBucket {
         limit_id,
+        applies_to_products: None,
         plan_type,
         primary,
         secondary,

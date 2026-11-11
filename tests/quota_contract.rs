@@ -74,6 +74,74 @@ fn legacy_missing_id_is_not_invented() {
 }
 
 #[test]
+fn query_product_and_unpublished_scope_metadata_do_not_establish_allowance_coverage() {
+    for (limit_id, plan_type) in [
+        ("codex", "pro"),
+        ("shared_agent_pool", "future_plan"),
+        ("future_bucket", "unknown"),
+    ] {
+        let report = parse_codex_rate_limits(&json!({
+            "sharedProducts": ["synthetic_agent_a", "synthetic_agent_b"],
+            "rateLimits": {
+                "limitId": limit_id,
+                "planType": plan_type,
+                "primary": {"usedPercent":25},
+                "appliesToProducts": ["synthetic_agent_a"],
+                "applies_to_products": ["synthetic_agent_b"],
+                "sharedProducts": ["synthetic_agent_a", "synthetic_agent_b"],
+                "isShared": true
+            }
+        }))
+        .unwrap();
+        assert_eq!(report.product, "codex");
+        assert_eq!(report.meter_kind, "consumer_subscription_allowance");
+        assert_eq!(report.buckets[0].applies_to_products, None);
+        let serialized = serde_json::to_value(&report).unwrap();
+        assert!(serialized["buckets"][0]["applies_to_products"].is_null());
+        let text = serde_json::to_string(&report).unwrap();
+        assert!(!text.contains("synthetic_agent_a"));
+        assert!(!text.contains("synthetic_agent_b"));
+    }
+}
+
+#[test]
+fn distinct_buckets_with_equal_percentages_are_not_merged_or_assumed_shared() {
+    let report = parse_codex_rate_limits(&json!({
+        "rateLimitsByLimitId": {
+            "bucket_a": {"primary":{"usedPercent":25}},
+            "bucket_b": {"primary":{"usedPercent":25}}
+        }
+    }))
+    .unwrap();
+    assert_eq!(report.buckets.len(), 2);
+    assert_eq!(report.buckets[0].limit_id.as_deref(), Some("bucket_a"));
+    assert_eq!(report.buckets[1].limit_id.as_deref(), Some("bucket_b"));
+    for bucket in &report.buckets {
+        assert_eq!(bucket.applies_to_products, None);
+        assert_eq!(bucket.primary.as_ref().unwrap().used_percent, Some(25.0));
+    }
+}
+
+#[test]
+fn weekly_only_observation_does_not_create_a_five_hour_window() {
+    let report = parse_codex_rate_limits(&json!({
+        "rateLimits": {
+            "limitId":"future_bucket",
+            "primary":null,
+            "secondary":{"usedPercent":33,"windowDurationMins":10080}
+        }
+    }))
+    .unwrap();
+    let bucket = &report.buckets[0];
+    assert_eq!(bucket.primary, None);
+    assert_eq!(
+        bucket.secondary.as_ref().unwrap().duration_minutes,
+        Some(10080)
+    );
+    assert_eq!(bucket.applies_to_products, None);
+}
+
+#[test]
 fn reset_only_is_unknown_usage_not_zero() {
     let report = parse_codex_rate_limits(&legacy(json!({
         "usedPercent":null, "windowDurationMins":null, "resetsAt":1794400000

@@ -10,14 +10,17 @@
 | --- | --- | --- |
 | App Server 公布了 `account/rateLimits/read` 和相关更新通知，stdio 是可用传输 | [官方 App Server 文档](https://learn.chatgpt.com/docs/app-server)，文档已核查 | 所选官方 Windows 发行版的实际行为、可用字段、限频 |
 | 多桶响应与兼容单桶响应不能重复计数；窗口、重置和 credits 可缺失 | [固定提交的账户协议类型](https://github.com/openai/codex/blob/87b7bdbf2efb9cb6fb15d821ef535061012c0138/codex-rs/app-server-protocol/src/protocol/v2/account.rs)，源码已核查 | 真实套餐的桶、字段精度及缺失值 |
+| `product=codex` 表示采集入口，不表示额度仅供该产品使用；当前协议未提供完整的覆盖产品清单 | 同上协议类型，源码已核查；解析器的每桶 `applies_to_products` 保持 `null` | 共享范围需独立证据并绑定具体账户、桶及窗口；不由套餐名、桶名或相同比例推断 |
 | 额度接口要求 Codex 后端认证，API-key-only 不足；空快照不等于零 | [固定提交的账户处理代码](https://github.com/openai/codex/blob/87b7bdbf2efb9cb6fb15d821ef535061012c0138/codex-rs/app-server/src/request_processors/account_processor.rs)，源码已核查 | 真实过期登录及错误分类 |
 | 现有本地／开源应用可继续使用 App Server authentication；商业或托管服务不在许可范围 | [官方文档 Auth endpoints](https://learn.chatgpt.com/docs/app-server)，文档已核查 | **新建本地只读看板的认证适用性尚未确认**，不能把开源代码许可当作认证许可 |
 | `account/read` 的 `refreshToken:false` 不强制刷新，但后续调用和官方进程仍可能维护认证状态 | [官方认证说明](https://learn.chatgpt.com/docs/app-server)，文档已核查 | 本地文件写入、凭据存储隔离、自动刷新、插件及其他启动副作用 |
 | 命名配置 profile 与运行目录不是同一个概念；官方可从多层配置加载行为 | [官方配置参考](https://learn.chatgpt.com/docs/config-file/config-reference)，文档已核查 | Windows 的实际配置、系统策略、密钥链命名空间是否隔离 |
 | App Server 启动会初始化本地状态及插件启动工作，RPC 白名单不能约束全部进程行为 | [固定提交的 App Server 启动实现](https://github.com/openai/codex/blob/87b7bdbf2efb9cb6fb15d821ef535061012c0138/codex-rs/app-server/src/lib.rs)，源码审查 | 未选择并放行具体官方构建；当前真实探测关闭 |
-| Codex 额度不能覆盖所有 ChatGPT 消费额度；12 月共享 allowance 是未来公告 | [使用限制公告](https://help.openai.com/en/articles/20001625-understanding-chatgpt-and-codex-usage-limits)，文档已核查 | 用户当前套餐及账户是否已经启用任何新规则 |
+| 不能把采集到的代理产品额度扩大为全部 ChatGPT 消费额度；12 月共享 allowance 是未来公告 | [使用限制公告](https://help.openai.com/en/articles/20001625-understanding-chatgpt-and-codex-usage-limits)，文档已核查 | 账户当前可能已有其他产品共享范围；应分别核查，不能用未来公告覆盖当前账户证据 |
 
 本项目不实现 Sign in with ChatGPT 推理，也不假定其具备完整额度读取接口。订阅加购 credits、重置权益、API 余额和美元费用分别处理。
+
+用户提供的套餐页面描述属于用户报告证据，不等于本项目已读取并验证 RPC。它可用于确定待核查范围，不能直接给某个额度桶补上共享产品列表。公开测试只使用合成数据，不记录个人套餐、账单或应用版本。
 
 ## xAI
 
