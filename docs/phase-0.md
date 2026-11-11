@@ -21,7 +21,7 @@ cargo test --locked --features test-support
 
 独立脚本 `scripts/codex-unauthenticated-smoke.py` 用于已选定官方发行物的无登录协议检查，不开放默认验证器的真实账户采集。2026-11-11 的 Linux 检查结果为：版本 0.167.1；临时认证档案为空，`account/read` 返回空账户；额度请求因未认证而拒绝（RPC 错误码 `-32600`）；没有发起登录或模型任务，观测额度为 `null`，`real_account_verified=false`。
 
-该次检查的网络隔离由外层 Linux network namespace 提供；脚本自身不宣称阻断网络。Windows 原生无登录 CI 尚待结果，不能沿用 Linux 的网络隔离结论。以上只证明该无登录路径，不代表有认证时的刷新、凭据隔离或真实额度已经通过。
+该次检查的网络隔离由外层 Linux network namespace 提供；脚本自身不宣称阻断网络。Windows 原生 App Server 0.167.1 的[无登录 CI](https://github.com/alanxiaofeifei/ai-quota-dashboard/actions/runs/42939400859)也已通过，确认空账户和已知认证拒绝；Windows 测试没有宣称采用同样的网络沙箱。[双平台离线检查](https://github.com/alanxiaofeifei/ai-quota-dashboard/actions/runs/42939327717)包括 Windows 诊断脚本、解析器及浏览器选区合成测试。以上只证明无登录与合成路径，不代表有认证时的刷新、凭据隔离或真实额度已经通过。
 
 ## 2. 真实验证开始前的条件
 
