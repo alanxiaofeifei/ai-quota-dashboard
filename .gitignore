@@ -1,0 +1,8 @@
+/target/
+/dist/
+/reports/
+/profiles/
+*.tmp
+auth.json
+.env
+.env.*

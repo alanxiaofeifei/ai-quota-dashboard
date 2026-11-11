@@ -1,0 +1,30 @@
+name: Offline Phase 0 checks
+on: [push, pull_request, workflow_dispatch]
+permissions:
+  contents: read
+jobs:
+  offline:
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - uses: dtolnay/rust-toolchain@1.99.1
+        with:
+          components: rustfmt, clippy
+      - run: cargo fmt --all -- --check
+      - run: cargo clippy --locked --all-targets --all-features -- -D warnings
+      - run: cargo test --locked
+      - run: cargo test --locked --all-features
+      - run: node --test scripts/source-manifest.test.mjs
+      - run: cargo build --locked --release --bin ai-quota-preflight
+      - run: cargo run --locked --bin ai-quota-preflight -- doctor
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ai-quota-preflight-${{ runner.os }}
+          path: target/release/ai-quota-preflight${{ runner.os == 'Windows' && '.exe' || '' }}
+          if-no-files-found: error
