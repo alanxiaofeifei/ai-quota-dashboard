@@ -50,12 +50,18 @@ fn run(args: Vec<String>) -> Result<(), (i32, &'static str)> {
                 "host": {"os": std::env::consts::OS, "arch": std::env::consts::ARCH},
                 "generated_at_unix_seconds": now(),
                 "stage0": {
+                    "target": "authenticated_codex_rpc",
                     "status": "blocked",
                     "new_client_policy": "pending_review",
                     "official_client_build": "not_verified",
                     "windows_runtime": "not_tested",
                     "account_ui_comparison": "not_tested",
                     "startup_and_auth_isolation": "not_tested"
+                },
+                "foreground_browser_source": {
+                    "field_comparison": "user_reported_match",
+                    "account_binding": "user_assigned_not_verified",
+                    "background_refresh": "not_implemented"
                 },
                 "checks": {"client_launched": false, "credentials_read": false, "network_used": false},
                 "live_probe_enabled": false

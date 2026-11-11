@@ -8,3 +8,7 @@ auth.json
 .env.*
 __pycache__/
 *.py[cod]
+/web/node_modules/
+/web/dist/
+*.sqlite
+*.sqlite-*

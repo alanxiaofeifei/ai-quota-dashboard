@@ -1,10 +1,10 @@
 [package]
 name = "ai-quota-preflight"
-version = "0.2.0"
+version = "0.3.0"
 edition = "2021"
-rust-version = "1.85"
+rust-version = "1.99"
 license = "MIT"
-description = "Local-only Phase 0 feasibility tools for AI subscription quota monitoring"
+description = "Local AI subscription quota observations and feasibility tools"
 publish = false
 default-run = "ai-quota-preflight"
 
@@ -15,16 +15,32 @@ test-support = []
 [dependencies]
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
+axum = "0.8"
+chrono = { version = "0.4", features = ["serde"] }
+directories = "6"
+getrandom = "0.3"
+rusqlite = { version = "0.37", features = ["bundled"] }
+sha2 = "0.10"
+subtle = "2"
+tokio = { version = "1", features = ["macros", "net", "rt-multi-thread", "signal"] }
+uuid = { version = "1", features = ["v4"] }
+webbrowser = "1"
 
 [target.'cfg(unix)'.dependencies]
 libc = "0.2"
 
 [dev-dependencies]
 tempfile = "3"
+http-body-util = "0.1"
+tower = { version = "0.5", features = ["util"] }
 
 [[bin]]
 name = "ai-quota-preflight"
 path = "src/main.rs"
+
+[[bin]]
+name = "ai-quota-dashboard"
+path = "src/dashboard_main.rs"
 
 [[bin]]
 name = "quota-mock-app-server"

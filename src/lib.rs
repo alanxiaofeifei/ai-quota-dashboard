@@ -2,3 +2,6 @@
 pub mod quota;
 #[cfg(feature = "test-support")]
 pub mod rpc;
+pub mod server;
+pub mod snapshot;
+pub mod store;
