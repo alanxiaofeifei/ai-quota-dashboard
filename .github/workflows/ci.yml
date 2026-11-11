@@ -40,19 +40,44 @@ jobs:
       - run: cargo build --locked --release --bin ai-quota-dashboard
       - run: cargo run --locked --bin ai-quota-dashboard -- --version
       - run: cargo run --locked --bin ai-quota-preflight -- doctor
+      - name: Collect third-party licenses and prepare portable packages
+        shell: bash
+        run: |
+          cargo fetch --locked
+          python scripts/package-notices.py --output dist/package-notices
+          node scripts/source-manifest.mjs > dist/source-manifest.json
+          python - <<'PY'
+          import hashlib
+          import pathlib
+          import shutil
+          import sys
+
+          suffix = '.exe' if sys.platform == 'win32' else ''
+          for name in ('ai-quota-preflight', 'ai-quota-dashboard'):
+              destination = pathlib.Path('dist') / name
+              shutil.copytree('dist/package-notices', destination)
+              binary = pathlib.Path('target/release') / (name + suffix)
+              shutil.copy2(binary, destination)
+              shutil.copy2('dist/source-manifest.json', destination / 'SOURCE_MANIFEST.json')
+              digest = hashlib.sha256(binary.read_bytes()).hexdigest()
+              (destination / 'SHA256SUMS').write_text(f'{digest}  {binary.name}\n', encoding='utf-8')
+          extension = pathlib.Path('dist/quota-usage-selection-validator')
+          shutil.copytree('browser-extension', extension)
+          shutil.copy2('LICENSE', extension / 'LICENSE')
+          PY
       - uses: actions/upload-artifact@v4
         with:
           name: ai-quota-preflight-${{ runner.os }}
-          path: target/release/ai-quota-preflight${{ runner.os == 'Windows' && '.exe' || '' }}
+          path: dist/ai-quota-preflight/
           if-no-files-found: error
       - uses: actions/upload-artifact@v4
         if: runner.os == 'Linux'
         with:
           name: quota-usage-selection-validator
-          path: browser-extension/
+          path: dist/quota-usage-selection-validator/
           if-no-files-found: error
       - uses: actions/upload-artifact@v4
         with:
           name: ai-quota-dashboard-${{ runner.os }}
-          path: target/release/ai-quota-dashboard${{ runner.os == 'Windows' && '.exe' || '' }}
+          path: dist/ai-quota-dashboard/
           if-no-files-found: error

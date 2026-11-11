@@ -4,7 +4,7 @@
 
 ## Windows 使用
 
-1. 在本项目最新成功的 GitHub Actions 中下载 `ai-quota-dashboard-Windows`，解压后双击 `ai-quota-dashboard.exe`。界面已嵌入程序，最终用户无需安装 Node、Python 或 Rust。
+1. 在本项目最新成功的 GitHub Actions 中下载 `ai-quota-dashboard-Windows`，解压后双击 `ai-quota-dashboard.exe`。界面已嵌入程序，最终用户无需安装 Node、Python 或 Rust；请保留下载包中的许可声明及第三方源码目录，重新分发时一并提供。
 2. 默认浏览器会打开 `127.0.0.1` 的随机本地端口并完成本次授权。原型阶段请保留程序的控制台窗口；关闭程序即停止服务，托盘体验留待后续阶段。
 3. 在已登录的官方 [Usage 页面](https://chatgpt.com/settings/usage?tab=overview) 手动刷新并用现有扩展读取额度，下载摘要 JSON。[扩展步骤](browser-selection.md)
 4. 在本地看板创建一个账户别名，明确选择该别名后导入 JSON，再核对周额度、credits、读取时间和来源。
@@ -43,6 +43,8 @@ cargo build --locked --release --bin ai-quota-dashboard
 ```
 
 前端构建产物在编译时嵌入程序。原有 `ai-quota-preflight` 离线工具可在未构建界面时继续使用；看板程序如果未包含前端则拒绝启动。
+
+CI 下载包另附项目和第三方许可声明、适用的第三方源码、`SOURCE_MANIFEST.json` 功能源码指纹及 `SHA256SUMS` 程序哈希；这些是分发附件，界面运行不依赖它们。构建者应保留并随再分发提供相关许可与源码附件。
 
 仅开发诊断时可用 `--data-dir <绝对目录>`、`--port <端口>` 和 `--no-open`，查看完整参数可运行 `ai-quota-dashboard --help`。`--no-open` 不输出授权令牌，不能作为获取裸访问链接的办法；它也不会改变只监听本机的限制。
 
