@@ -5,16 +5,17 @@ interface Row {
  source: Snapshot['source'] | null; items_json: string | null; facts_json: string | null; fetched_at: string | null; observed_at: string | null; stale_after: number | null;
 }
 export async function overview(db: D1Database): Promise<Provider[]> {
- const result=await db.prepare(`SELECT p.*,c.provider_id,c.last_check_at,c.last_check_status,c.last_error_code,
- s.source,s.items_json,s.facts_json,s.fetched_at,s.observed_at,s.stale_after
- FROM providers p LEFT JOIN credentials c ON c.provider_id=p.id LEFT JOIN snapshots s ON s.provider_id=p.id
- WHERE p.enabled=1 ORDER BY p.sort_order,p.created_at,p.id`).all<Row>();
- return result.results.map(r=>({
-  id:r.id,type:r.provider_type,label:r.label,source:r.source??r.source_mode,region:JSON.parse(r.config_json).region??'cn',nextAllowedFetch:r.next_allowed_fetch_ms,
-  credential:{configured:r.provider_id!==null,lastCheckAt:r.last_check_at,lastCheckStatus:r.last_check_status??'unverified',lastErrorCode:r.last_error_code},
-  snapshot:r.items_json===null?null:{items:JSON.parse(r.items_json),facts:JSON.parse(r.facts_json??'{}'),source:r.source!,observedAt:r.observed_at!,fetchedAt:r.fetched_at!,staleAfter:r.stale_after!}
- }));
+ const result=await db.prepare(`SELECT p.*,s.source,s.items_json,s.facts_json,s.fetched_at,s.observed_at,s.stale_after
+ FROM providers p LEFT JOIN snapshots s ON s.provider_id=p.id WHERE p.enabled=1 ORDER BY p.sort_order,p.created_at,p.id`).all<Row>();
+ const credentials=(await db.prepare('SELECT provider_id,slot,last_check_at,last_check_status,last_error_code FROM credentials').all<{provider_id:string;slot:string;last_check_at:number|null;last_check_status:string;last_error_code:ErrorCode|null}>()).results;
+ return result.results.map(r=>{
+ const slots=credentials.filter(c=>c.provider_id===r.id),c=slots.find(c=>c.last_error_code)||slots.find(c=>c.slot==='management')||slots[0];
+ return {id:r.id,type:r.provider_type,label:r.label,source:r.source??r.source_mode,region:JSON.parse(r.config_json).region??'cn',nextAllowedFetch:r.next_allowed_fetch_ms,
+ credentialSlots:slots.map(c=>c.slot),credential:{configured:slots.length>0,lastCheckAt:c?.last_check_at??null,lastCheckStatus:c?.last_check_status??'unverified',lastErrorCode:c?.last_error_code??null},
+ snapshot:r.items_json===null?null:{items:JSON.parse(r.items_json),facts:JSON.parse(r.facts_json??'{}'),source:r.source!,observedAt:r.observed_at!,fetchedAt:r.fetched_at!,staleAfter:r.stale_after!}};
+ });
 }
+
 export function snapshotStatement(db: D1Database,id: string,s: Snapshot,now: number) {
  return db.prepare(`INSERT INTO snapshots(provider_id,source,items_json,facts_json,fetched_at,observed_at,stale_after,updated_at)
  VALUES(?,?,?,?,?,?,?,?) ON CONFLICT(provider_id) DO UPDATE SET source=excluded.source,items_json=excluded.items_json,

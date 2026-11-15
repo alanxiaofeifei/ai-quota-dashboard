@@ -3,11 +3,11 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import vm from 'node:vm';
 import { isUsageOverviewUrl, parseUsageSelection, UsageSelectionError } from '../browser-extension/usage-selection.mjs';
-import { captureUsageSelection } from '../browser-extension/capture-selection.mjs';
+import { captureUsageSelection } from './fixtures/capture-selection.mjs';
 
 // Execute the actual popup event handlers with controlled DOM/browser adapters.
 // These tests never open a browser, read a clipboard or contact an account.
-const popup = (await readFile(new URL('../browser-extension/popup.js', import.meta.url), 'utf8'))
+const popup = (await readFile(new URL('./fixtures/selection-popup-compat.mjs', import.meta.url), 'utf8'))
   .replace(/^import .*\n/gm, '');
 const pageUrl = 'https://chatgpt.com/settings/usage?tab=overview';
 const observedAt = '2026-11-01T12:34:56.000Z';

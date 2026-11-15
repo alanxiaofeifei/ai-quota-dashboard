@@ -1,16 +1,16 @@
 export type Unit = 'percent' | 'credits' | 'CNY' | 'USD' | 'tokens' | 'requests';
 export type Source = 'api' | 'manual' | 'extension';
-export type ErrorCode = 'unauthorized' | 'rate_limited' | 'upstream_error' | 'invalid_response' | 'timeout';
+export type ErrorCode = 'unauthorized' | 'rate_limited' | 'upstream_error' | 'invalid_response' | 'timeout' | 'wrong_key_type';
 export interface QuotaItem {
  id: string; label: string; amount: number | string | null; unit: Unit;
  resetAt: string | null; limit?: number | string | null; used?: number | string | null;
 }
 export interface Snapshot {items: QuotaItem[]; source: Source; observedAt: string; fetchedAt: string; staleAfter: number; facts: Facts}
-export interface Facts {available?: boolean | null; freeTier?: boolean | null; limitReset?: 'daily' | 'weekly' | 'monthly' | null}
+export interface Facts {available?: boolean | null; freeTier?: boolean | null; keyUnlimited?: boolean; limitReset?: 'daily' | 'weekly' | 'monthly' | null}
 export interface CredentialStatus {configured: boolean; lastCheckAt: number | null; lastCheckStatus: string; lastErrorCode: ErrorCode | null}
 export interface Provider {
  id: string; type: string; label: string; source: Source; region: string; nextAllowedFetch: number;
- credential: CredentialStatus; snapshot: Snapshot | null;
+ credentialSlots?: string[]; credential: CredentialStatus; snapshot: Snapshot | null;
 }
 export type CardState = 'healthy' | 'warning' | 'reset_due' | 'stale' | 'error_with_cache' | 'error' | 'unconfigured';
 export const staleDefaults = {api: 3600, extension: 900, manual: 86400};

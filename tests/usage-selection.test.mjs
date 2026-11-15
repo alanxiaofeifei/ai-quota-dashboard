@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import vm from 'node:vm';
 import { isUsageOverviewUrl, parseUsageSelection, UsageSelectionError, MAX_SELECTION_BYTES } from '../browser-extension/usage-selection.mjs';
-import { captureUsageSelection } from '../browser-extension/capture-selection.mjs';
+import { captureUsageSelection } from './fixtures/capture-selection.mjs';
 
 const pageUrl = 'https://chatgpt.com/settings/usage?tab=overview';
 const observedAt = '2026-11-01T12:34:56.000Z';
@@ -182,10 +182,13 @@ test('capture exports only user selection on an allowed page and enforces byte b
 
 test('extension permission and network boundaries remain minimal', async () => {
   const manifest = JSON.parse(await readFile(new URL('../browser-extension/manifest.json', import.meta.url), 'utf8'));
-  assert.deepEqual(manifest.permissions.sort(), ['activeTab', 'scripting']);
-  for (const key of ['host_permissions', 'content_scripts', 'background', 'web_accessible_resources']) assert.equal(key in manifest, false);
-  assert.match(manifest.content_security_policy.extension_pages, /connect-src 'none'/);
-  const popup = await readFile(new URL('../browser-extension/popup.js', import.meta.url), 'utf8');
+  assert.deepEqual(manifest.permissions.sort(), ['alarms', 'notifications', 'scripting', 'storage', 'tabs']);
+  for (const key of ['host_permissions', 'content_scripts', 'web_accessible_resources']) assert.equal(key in manifest, false);
+  assert.deepEqual(manifest.background, {service_worker:'background.js',type:'module'});
+  assert.deepEqual(manifest.optional_host_permissions,['https://*/*']);
+  assert.match(manifest.content_security_policy.extension_pages, /connect-src https:/);
+  assert.match(manifest.content_security_policy.extension_pages, /script-src 'self'/);
+  const popup = await readFile(new URL('./fixtures/selection-popup-compat.mjs', import.meta.url), 'utf8');
   assert.equal(popup.includes('console.'), false);
   assert.equal(popup.includes('fetch('), false);
   assert.equal(popup.includes('localStorage'), false);

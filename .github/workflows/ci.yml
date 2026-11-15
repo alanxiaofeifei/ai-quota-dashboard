@@ -1,66 +1,32 @@
-name: Local prototype and offline checks
+name: Worker and extension checks
 on: [push, pull_request, workflow_dispatch]
 permissions:
   contents: read
 jobs:
-  offline:
-    strategy:
-      matrix:
-        os: [ubuntu-latest, windows-latest]
-    runs-on: ${{ matrix.os }}
+  checks:
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: '22'
-      - uses: dtolnay/rust-toolchain@1.99.1
+          node-version: '24'
+          cache: npm
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm test
+      - run: npm run build
+      - run: npm run test:extension
+      - run: npm run build:extension
+      - uses: actions/upload-artifact@v4
         with:
-          components: rustfmt, clippy
-      - run: npm ci --prefix web
-      - run: npm test --prefix web
-      - run: npm run build --prefix web
-      - run: cargo fmt --all -- --check
-      - run: cargo clippy --locked --all-targets --all-features -- -D warnings
-      - run: cargo test --locked
-      - run: cargo test --locked --all-features
-      - run: node --test scripts/source-manifest.test.mjs
-      - run: node --test tests/usage-selection.test.mjs tests/popup-copy.test.mjs
-      - run: python -m unittest discover -s scripts -p test_codex_unauthenticated_smoke.py
-      - run: python -m unittest discover -s scripts -p test_package_portable.py
-      - name: Windows command discovery diagnostics tests
-        if: runner.os == 'Windows'
-        shell: pwsh
-        run: ./tests/windows-cli-diagnostics.Tests.ps1
-      - name: Verify mirrored core source when a backup manifest is present
+          name: ai-quota-sync-extension
+          path: dist/ai-quota-sync-extension.zip
+      - run: npm run test:manifest
+      - name: Check source manifest
         shell: bash
         run: |
+          node scripts/source-manifest.mjs > /tmp/source-manifest.json
+          node scripts/source-manifest.mjs --verify /tmp/source-manifest.json
           if [ -f core-backup.json ]; then
             node scripts/source-manifest.mjs --verify core-backup.json
           fi
-      - run: cargo build --locked --release --bin ai-quota-preflight
-      - run: cargo build --locked --release --bin ai-quota-dashboard
-      - run: cargo run --locked --bin ai-quota-dashboard -- --version
-      - run: cargo run --locked --bin ai-quota-preflight -- doctor
-      - name: Collect third-party licenses and prepare portable packages
-        shell: bash
-        run: |
-          cargo fetch --locked
-          python scripts/package-notices.py --output dist/package-notices
-          node scripts/source-manifest.mjs > dist/source-manifest.json
-          python scripts/package-portable.py --notices dist/package-notices --source-manifest dist/source-manifest.json --output dist/packages
-      - uses: actions/upload-artifact@v4
-        with:
-          name: ai-quota-preflight-${{ runner.os }}
-          path: dist/packages/ai-quota-preflight/
-          if-no-files-found: error
-      - uses: actions/upload-artifact@v4
-        if: runner.os == 'Linux'
-        with:
-          name: quota-usage-selection-validator
-          path: dist/packages/quota-usage-selection-validator/
-          if-no-files-found: error
-      - uses: actions/upload-artifact@v4
-        with:
-          name: ai-quota-dashboard-${{ runner.os }}
-          path: dist/packages/ai-quota-dashboard/
-          if-no-files-found: error
