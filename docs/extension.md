@@ -4,7 +4,7 @@ MV3 Chrome 扩展，配对一次后自动读取指定的官方额度显示值，
 
 ## 安装与配对
 
-1. 从项目 GitHub Release 的附件（如操作者已附加），或 GitHub Actions 的 `ai-quota-sync-extension` artifact 下载 zip。解压；本地开发也可直接用仓库 `browser-extension/`。`npm run build:extension` 生成 `dist/ai-quota-sync-extension.zip`；CI 上传 artifact，不自动创建 Release。
+1. 从 [Release v1.1.0](https://github.com/alanxiaofeifei/ai-quota-dashboard/releases/tag/v1.1.0) 下载 `ai-quota-sync-extension.zip`（或 GitHub Actions 的 `ai-quota-sync-extension` artifact），解压；本地开发也可直接用仓库 `browser-extension/`。`npm run build:extension` 生成 `dist/ai-quota-sync-extension.zip`。
 2. 打开 `chrome://extensions`，启用「开发者模式」→「加载已解压的扩展程序」→ 选择含 `manifest.json` 的目录。在工具栏固定 AI Quota Sync 图标。
 3. 看板「连接浏览器扩展」→ 填写设备名称 →「创建一次性配对码」。码是一个 `aiq1.…` 字符串，仅在本次响应显示。关闭对话框后不会再次显示；遗失时撤销设备并重新创建。配对码具有设备权限，请勿截图或分享真实码。
 4. 扩展图标 → ⚙「配对与设置」，粘贴码并点「连接」。浏览器只在本机 `chrome.storage.local` 保存令牌，绝不使用同步存储。首次连接需允许访问自己的看板域名。
