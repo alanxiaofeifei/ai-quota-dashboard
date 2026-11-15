@@ -1,0 +1,20 @@
+import type { Messages } from './zh-CN';
+export const en: Messages = {
+ retiredApi:'The official balance endpoint was retired. Use manual observations.', title:'Quota overview',eyebrow:'PERSONAL ALLOWANCE',headline:'Every allowance, in view.',subtitle:'Your subscriptions and API balances, together.',
+ all:'All',attention:'Needs attention',api:'API balance',subscription:'Subscriptions',refresh:'Refresh APIs',add:'Add provider',light:'Switch to light',dark:'Switch to dark',
+ demo:'Demo mode',private:'Private instance',demoNote:'Synthetic demo data. Keys and values are never saved; no provider requests are made.',
+ need:'need attention',providers:'providers',apiCount:'APIs',subCount:'subscriptions',healthy:'Healthy',warning:'Low allowance',reset_due:'Reset needs confirmation',stale:'Stale observation',error_with_cache:'API error · saved snapshot',error:'API error',unconfigured:'Not configured',
+ remaining:'remaining',unknown:'Unknown',update:'Update values',manage:'Manage key',official:'Official page',source:'Source',manual:'Manual',extension:'Extension',age:'ago',now:'Just now',
+ resetDue:'Estimated reset passed. Re-read to confirm.',reset:'Estimated reset',noReset:'No reset time provided',empty:'No providers yet. Add one to start tracking.',noResults:'No providers match this filter.',
+ loading:'Reading allowances…',close:'Close',cancel:'Cancel',save:'Save',saveKey:'Save encrypted',test:'Test and preview',clear:'Clear key',configured:'Configured',notConfigured:'Not configured',
+ provider:'Provider',label:'Card name',region:'Key region',key:'API key',keyNote:'Keys are submitted only in the request body and stored with AES-256-GCM encryption. Saved keys are never echoed.',managementNote:'This endpoint requires a Management Key. For a standard key, select OpenRouter · Key.',
+ manualNote:'Blank means unknown. Enter each unit separately; balances are never converted.',resetInput:'Reset time (e.g. 3d 4h or ISO timestamp with timezone)',dateInput:'Or choose local date and time',
+ importTitle:'Paste ChatGPT extension summary JSON',importButton:'Import summary',importNote:'Accepts the existing selection extension summary. Observation time remains the original page read time.',preview:'Preview',saved:'Saved',
+ errorMessage:'Action could not be completed',retry:'Retry',cooldown:'Cooling down',footer:'Official APIs and your observations. A reset passing does not confirm that allowance has recovered.',
+ balance:'Balance',weekly_percent:'Weekly allowance',five_hour_percent:'5-hour window',credits:'Separate Credits',tokens:'Tokens',requests:'Requests',
+ available_balance:'Available balance',voucher_balance:'Voucher',cash_balance:'Cash',totalBalance:'Total balance',chargeBalance:'Top-up balance',key_remaining:'Key budget remaining',account_remaining:'Account balance',
+ usage:'Lifetime usage',limit:'Key budget',total_credits:'Purchased',total_usage:'Total usage',balance_CNY:'Available balance',balance_USD:'Available balance',granted_CNY:'Granted',granted_USD:'Granted',topped_up_CNY:'Top-ups',topped_up_USD:'Top-ups',
+ freeTier:'Free tier',available:'Account available',unavailable:'Account unavailable',daily:'Daily',weekly:'Weekly',monthly:'Monthly',recurrence:'Budget reset interval',lastCheck:'Last check',
+ unauthorized:'Invalid key or insufficient permissions',rate_limited:'Upstream rate limit; try later',upstream_error:'Upstream unavailable',invalid_response:'Invalid upstream response',timeout:'Upstream timed out',
+ demo_read_only:'Demo mode is read-only. Keys are never saved or sent.',origin_rejected:'Request origin mismatch',json_required:'JSON is required',body_too_large:'Input exceeds the size limit',invalid_key:'Enter a valid key',invalid_input:'Invalid input; check the fields',invalid_reset:'Invalid reset time',invalid_json:'Invalid JSON',invalid_report:'Invalid extension summary',older_observation:'Summary is older than the saved observation',encryption_not_configured:'Encryption master key is not configured',auth_not_configured:'Authentication is not configured',internal_error:'Temporarily unavailable; try again',forbidden:'This account is not authorized',not_found:'Record not found'
+};

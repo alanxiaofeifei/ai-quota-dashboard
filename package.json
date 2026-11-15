@@ -1,0 +1,32 @@
+{
+  "name": "ai-quota-dashboard",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=24"
+  },
+  "scripts": {
+    "typecheck": "wrangler types && tsc --noEmit",
+    "test": "vitest run",
+    "build": "vite build && wrangler deploy --dry-run --outdir dist/worker",
+    "dev": "npm run build && wrangler dev --local",
+    "types": "wrangler types",
+    "test:extension": "node --test tests/usage-selection.test.mjs tests/popup-copy.test.mjs",
+    "test:manifest": "node --test scripts/source-manifest.test.mjs scripts/sync-personal.test.mjs"
+  },
+  "dependencies": {
+    "react": "19.3.1",
+    "react-dom": "19.3.1"
+  },
+  "devDependencies": {
+    "@types/node": "24.10.0",
+    "@types/react": "19.3.0",
+    "@types/react-dom": "19.3.0",
+    "puppeteer-core": "25.17.0",
+    "typescript": "7.0.2",
+    "vite": "8.3.7",
+    "vitest": "5.1.0",
+    "wrangler": "4.162.0"
+  }
+}

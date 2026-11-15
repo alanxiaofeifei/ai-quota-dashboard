@@ -174,3 +174,17 @@ test('path classification covers build inputs and excludes runtime/private data'
   assert.equal(validRelativePath('src/new\nline.rs'), true);
   assert.equal(validRelativePath('../src/main.rs'), false);
 });
+
+test('Workers source and migrations are managed; legacy and personal config excluded',()=>{
+ for(const p of ['server/auth.ts','migrations/0001_init.sql','shared/catalog.ts','worker/index.ts'])assert.equal(isFunctionalPath(p),true);
+ for(const p of ['legacy/rust-prototype/src/main.rs','wrangler.personal.jsonc','worker-configuration.d.ts'])assert.equal(isFunctionalPath(p),false);
+});
+
+test('explicit worktree mode includes new/dirty files while release mode still rejects them',async t=>{
+ const {buildWorktreeManifest,verifyWorktreeManifest}=await import('./source-manifest.mjs');
+ const root=await repository(t,{'package.json':'{}','server/auth.ts':'initial','migrations/0001.sql':'schema'});
+ await put(root,'server/auth.ts','dirty');await put(root,'worker/index.ts','new');await put(root,'legacy/src/lib.rs','excluded');
+ const manifest=await buildWorktreeManifest(root);assert.equal(manifest.source_mode,'worktree');assert.ok(manifest.files.some(f=>f.path==='worker/index.ts'));assert.ok(!manifest.files.some(f=>f.path.startsWith('legacy/')));
+ assert.equal((await verifyWorktreeManifest(manifest,root)).status,'verified');await assert.rejects(buildManifest(root),{code:'functional_source_dirty'});
+ await put(root,'worker/index.ts','changed');await assert.rejects(verifyWorktreeManifest(manifest,root),{code:'manifest_mismatch'});
+});

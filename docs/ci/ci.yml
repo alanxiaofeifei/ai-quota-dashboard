@@ -1,0 +1,27 @@
+name: Worker and extension checks
+on: [push, pull_request, workflow_dispatch]
+permissions:
+  contents: read
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm test
+      - run: npm run build
+      - run: npm run test:extension
+      - run: npm run test:manifest
+      - name: Check source manifest
+        shell: bash
+        run: |
+          node scripts/source-manifest.mjs > /tmp/source-manifest.json
+          node scripts/source-manifest.mjs --verify /tmp/source-manifest.json
+          if [ -f core-backup.json ]; then
+            node scripts/source-manifest.mjs --verify core-backup.json
+          fi
