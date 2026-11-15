@@ -1,71 +1,110 @@
-# AI Quota
+# Quota AI · AI 额度看板
 
-本地优先的 AI 订阅额度看板。当前 v0.3.1 提供单所有者的本地只读原型，以及来源验证工具；已接入的是用户主动读取的 OpenAI Usage 页面摘要。
+一个自己部署、单所有者使用的 AI 额度总览：API 余额自动读取，个人订阅手动记录，ChatGPT 扩展摘要粘贴导入。Cloudflare Worker 同时提供 React 网页和 API，D1 保存最后成功快照及加密密钥。默认深色、中文，可切换亮色与 English。
 
-**前台读取已获得用户一致性确认，后台自动查询尚未验证。** 本地看板保存和展示扩展导出的摘要，不自动登录平台；真实账户 `probe-codex` 仍关闭。Sites、Android 联网入口、提醒和云同步继续后置。
+缺失值显示 `—`。百分比、订阅 credits、美元与人民币分别展示；预计重置时间过去只提示“重新读取确认”，不会把余量改成 100%。默认过期阈值：API 1 小时、扩展 15 分钟、手动 24 小时。无 Cron。
 
-## Windows 本地看板
+## 本地演示
 
-下载最新成功 GitHub Actions 中的 `ai-quota-dashboard-Windows`，解压后双击程序。界面已嵌入单文件，无需 Node、Python 或手动查额度命令。
-
-1. 程序自动打开本机网站；保留程序窗口，关闭即停止服务。看板中的三步引导和“使用帮助”会说明操作。
-2. 扩展随包放在 `browser-extension/` 子目录。Chrome／Edge 加载该子目录，不能加载 exe 所在根目录；也可沿用并更新已有扩展。
-3. 在看板创建本地账户别名，在官方 Usage 页面读取并核对后，点击扩展“复制摘要”，回到看板“粘贴摘要”导入。下载 JSON 导入方式仍保留。
-
-`127.0.0.1` 是本机网站地址。扩展负责读取官方页面，本地程序负责保存并展示摘要；GitHub 保存源码和备份，不代表已经发布 GitHub Pages。个人在线版的目标仍为 ChatGPT Sites，当前尚未部署。
-
-周额度、credits、网页读取时间、数据过期与预计重置会分别展示。账户归属由用户指定；服务端更新时间和共享覆盖范围仍保持未知。其他平台标记为未接入，初次启动没有演示额度。
-
-详见[本地原型使用、构建和备份说明](docs/local-prototype.md)。当前数据流仍是主动读取和本地导入，不是无人值守更新。
-
-## 离线验证工具
-
-从源码构建需要 Rust 工具链。工具不自动安装或更新 Codex、Antigravity、浏览器、VPN 或云服务。
+需要 Node 24、npm，版本固定在 `package-lock.json`。不需要账户、真实 API Key 或主密钥。
 
 ```sh
-cargo build --locked
-cargo run --locked -- doctor
-cargo run --locked -- parse-codex --input fixtures/codex-rate-limits.json --output synthetic-report.json
-cargo test --locked
-cargo test --locked --features test-support
+npm ci
+npm run build
+npx wrangler dev --local --var AUTH_MODE:demo
 ```
 
-示例文件是合成数据，不代表任何账户或套餐。输出文件须是新文件；重复运行时换一个文件名，避免覆盖已有数据。
+打开命令输出的本机地址。演示包含 11 张合成卡片及正常、低额度、重置待确认、过期、接口异常保留记录、未配置等状态；所有写操作拒绝保存，绝不调用供应商接口。不要把 demo 当成真实账户额度。
 
-- `doctor [--output <new.json>]`：检查本地运行环境，不启动官方客户端、不读取认证或聊天。
-- `parse-codex --input <file.json> --output <new.json>`：离线读取指定的额度 JSON，输出归一化摘要。支持 RPC `result` 包装和直接结果；不保留完整原始输入。
-- `probe-codex`：预留命令。当前返回 `live_probe_unverified`，退出码为 3；即使提供确认参数也不会启动进程或访问账户。
+`npm run dev` 默认关闭身份入口，须通过本地变量显式设置 `AUTH_MODE`；建议按上述命令启动演示。`/healthz` 仅用于存活检查；未配置 AUTH_MODE 的其他入口返回 503。
 
-请勿把 `auth.json`、Cookie、浏览器会话或聊天导出作为解析输入。真实额度摘要也可能含个人使用信息，不应自动提交到仓库或公开 issue。
+## 部署你自己的实例（由操作者执行）
 
-## 数据真实性
+本仓库提供通用 `wrangler.jsonc`：`workers_dev: false`、`preview_urls: false`、Worker 先鉴权再提供静态资源。数据库 ID 全零是占位符，必须换成你创建的 D1 ID。以下包含远程操作，本次实现没有执行。
 
-解析器保留平台的桶和窗口含义，优先使用多桶响应，避免重复计入兼容单桶。缺失比例、窗口或重置时间保持未知；认证错误、空快照和无效响应不会变成零额度。订阅 credits 不标成 API 余额或美元费用；时间到点不推断已经恢复。
+1. 在自己的 Cloudflare 账户创建 D1，记录返回的数据库 ID：
 
-`product="codex"` 是查询入口，不代表独占额度池。每桶 `applies_to_products=null` 表示覆盖产品未知；不根据套餐名称、桶名或相同比例推定共享范围，也不自动生成五小时窗口。
+   ```sh
+   npx wrangler d1 create ai-quota-dashboard
+   ```
 
-`ai-quota-preflight` 只离线处理数据；本地看板 API 只保存和读取自己的 SQLite 摘要。独立 Python 无登录检查会显式启动指定官方客户端，使用新的内存认证档案；浏览器实验只读取用户选中的额度文本。无登录检查与合成测试不能替代已登录 RPC 或全部套餐的验证。
+   可将公共模板复制为被 Git 忽略的 `wrangler.personal.jsonc`，修改其中 D1 ID，保留 `DB` 绑定、`migrations_dir: "migrations"` 与 `ASSETS` 绑定。后续命令均指向同一配置文件。不要将真实个人 ID / 路由回填公共模板。
 
-`test-support` 仅为模拟传输测试提供辅助实现；它不会开放 `probe-codex`。正常构建不要启用该功能。
+2. 在 Cloudflare Zero Trust 创建 Access Self-hosted 应用，覆盖你自己的完整域名及所有路径，只允许所有者邮箱。设置应用对应的 DNS / Worker 自定义域名，不开启公开 workers.dev 或 preview URL。设置 Worker 变量（可写入个人配置的 `vars`）：
 
-## 不依赖终端的网页候选
+   ```json
+   {
+     "AUTH_MODE": "access",
+     "CF_ACCESS_TEAM_DOMAIN": "your-team.cloudflareaccess.com",
+     "CF_ACCESS_AUD": "your-access-application-audience",
+     "OWNER_EMAIL": "you@example.com"
+   }
+   ```
 
-新版账户可在 [ChatGPT Usage](https://chatgpt.com/settings/usage?tab=overview) 查看额度；旧 Codex usage 链接可能重定向到首页，以账户实际页面为准。
+   Team domain 不带协议或路径；AUD 必须取自该应用。Worker 自己校验 Access JWT 的签名、签发者、受众、有效期及邮箱，不能只依赖边缘策略。
 
-`browser-extension/` 是 Chrome／Edge 桌面扩展验证器。它仅在用户点击时读取该额度页中**用户选中的文本**，不抓整页、不读取 Cookie、不调用隐藏接口、不上传数据。输出保留周额度、相对重置与 credits 的不同含义；数据来源和新鲜度仍需人工核对。它不是后台自动采集器。
+3. 生成 32 字节随机加密主密钥，经 stdin 设置 Worker secret；不把它写入命令参数、Git、日志或聊天：
 
-安装和测试步骤见[网页读取验证](docs/browser-selection.md)。Windows 终端的更新故障不会阻塞这条路线。
+   ```sh
+   openssl rand -base64 32 | npx wrangler secret put MASTER_ENCRYPTION_KEY --config wrangler.personal.jsonc
+   ```
 
-## 后续验证与文档
+   请用密码管理器另行安全保存主密钥。已有密文不能直接换主密钥；更换后须重新录入各供应商密钥。`secret put` 会创建/部署 Worker 版本，先确认个人配置目标；下面的完整部署仍需执行。
 
-- [阶段 0 操作与验收清单](docs/phase-0.md)：进入真实 Windows 验证的前提、观察项目和通过门槛。
-- [本地看板原型](docs/local-prototype.md)：单文件使用、构建、存储与回滚。
-- [Windows 客户端版本确认](docs/windows-preflight.md)：区分应用、CLI 与 App Server 版本，确认已有安装后再验证。
-- [网页读取验证](docs/browser-selection.md)：本地选区读取、字段核对及扩展权限。
-- [来源与证据状态](docs/evidence.md)：公开文档／源码与实账验证分开登记。
-- [安全边界](docs/security.md)：凭据、进程、日志和后续网络访问的约束。
-- [GitHub 与个人站点交付](docs/delivery.md)：主仓、Sites 发布条件和可执行的源码版本一致性检查。
+4. 应用迁移并构建发布：
 
-开源主仓为 [alanxiaofeifei/ai-quota-dashboard](https://github.com/alanxiaofeifei/ai-quota-dashboard)，同时按同源指纹流程维护个人私有核心备份。个人在线版默认采用 owner-private 的 ChatGPT Sites；按用户选择，后台自动采集验证前暂不部署。当前只有本地原型，没有 Sites 部署。所有功能源码、锁文件和构建过程保留在 GitHub，部署身份单独管理。
+   ```sh
+   npx wrangler d1 migrations apply ai-quota-dashboard --remote --config wrangler.personal.jsonc
+   npm run typecheck
+   npm test
+   npm run build
+   npx wrangler deploy --config wrangler.personal.jsonc
+   ```
 
-本项目采用 MIT 许可。当前代码是独立实现；未捆绑其他看板或官方客户端。后续引入第三方实现时另行记录来源和许可。
+   自定义域名可在 Cloudflare Dashboard 绑定，或在个人配置中添加自己的路由。确认 Access 保护整个域名后访问站点。不要在真实数据实例启用 demo。
+
+本地访问模式测试可用 `npx wrangler dev --local --var AUTH_MODE:access --var CF_ACCESS_TEAM_DOMAIN:your-team.cloudflareaccess.com --var CF_ACCESS_AUD:synthetic-aud --var OWNER_EMAIL:owner@example.invalid`；无 JWT 时返回 401。D1 本地迁移：`npx wrangler d1 migrations apply DB --local`。真实开发密钥只能放被忽略的 `.dev.vars`；不要分享该文件。
+
+## 添加与更新
+
+“添加服务商”选择平台和区域 → 在密码输入框填写 API Key → “测试并预览”（不保存）→ “加密保存”（输入清空）。卡片刷新读取官方余额；管理密钥可替换或清除。服务端每张卡冷却至少 60 秒，429 的 Retry-After 延长冷却；测试预览也按服务商限流。刷新失败保留上次成功快照。
+
+订阅选择对应平台添加，再点“更新数值”。空白表示未知；可分别录入 5 小时 / 周百分比、credits、余额或资源数量。每个指标的重置输入支持 `3d 4h`、`2h 15m`、带时区 ISO 时间，或本地日期选择器；相对时间在保存时转换为绝对时间。
+
+ChatGPT 卡片的抽屉可粘贴现有 `browser-extension/` 选区扩展的摘要 JSON（`https://chatgpt.com/settings/usage?tab=overview`）。只接收白名单字段，不读取 Cookie / Session；保存页面原始观测时间，拒绝早于已存记录的摘要。扩展直推与配对属于 Phase 2。
+
+## 平台覆盖
+
+| 自动官方 API | 手动 / 扩展摘要 |
+| --- | --- |
+| DeepSeek；OpenRouter Key 预算；OpenRouter 账户余额（可选 Management Key）；Moonshot cn/ai | SiliconFlow cn/com（官方旧接口已停用，手动）；ChatGPT/Codex、Claude、Gemini/Google AI Pro、Grok、GLM/Coding Plan、Doubao/Volcengine、Qwen/Bailian、自定义 |
+
+个人订阅没有本项目可采用的公开余额 API，因此主动记录；云平台 AK/SK 签名和组织管理员接口推迟到 Phase 2。GLM 不调用未公开 monitor 端点。SiliconFlow 官方公告已于 2026-08-14 停用 `/user/info`，因此遵照最新官方文档改为手动，不发送 API 密钥。完整接口、字段和来源见 [平台矩阵](docs/providers.md)。密码登录、组织账单、扩展直推和后台定时刷新都不属于当前版本。
+
+## 验证与目录
+
+```sh
+npm ci
+npm run typecheck
+npm test
+npm run build
+npm run test:extension
+npm run test:manifest
+node scripts/source-manifest.mjs --worktree > /tmp/quota-source.json
+node scripts/source-manifest.mjs --worktree --verify /tmp/quota-source.json
+git diff --check
+```
+
+`worker/` 鉴权入口，`server/` API / 加密 / D1 / 适配器，`shared/` 真值契约 / 预设 / 双语，`web/` React，`migrations/` SQL，`tests/unit/` 模拟网络与真实 SQLite 测试。旧 Rust 源码及旧版前端位于 `legacy/rust-prototype/`，不参与 CI。
+
+个人镜像同步：`node scripts/sync-personal.mjs /path/to/personal-checkout`。仅同步受管源码与项目文档，保留个人 README、`wrangler.personal.jsonc`、`docs/PERSONAL.md`、环境文件，重建并验证 `core-backup.json`。会删除目标中已不在来源的受管文件；请在独立、已备份的个人 checkout 使用。本次没有向个人仓运行同步。
+
+默认 source-manifest 发布模式仍要求干净且已提交的功能源码；`--worktree` 明确标注未提交开发快照，用于本地验证与同步。CI 验证默认模式和镜像指纹。
+
+架构与后续入口：[PROJECT](docs/PROJECT.md)、[STATUS](docs/STATUS.md)、[安全说明](docs/security.md)。保留原 LICENSE。
+
+## English
+
+A self-hosted, single-owner Cloudflare Workers + D1 quota dashboard. Run the local synthetic demo with `npm ci`, `npm run build`, then `npx wrangler dev --local --var AUTH_MODE:demo`. No secrets or provider calls are used in demo mode.
+
+Deploy your own D1 database, replace the placeholder ID in a private config, protect the entire custom domain with Cloudflare Access, set `AUTH_MODE=access`, `CF_ACCESS_TEAM_DOMAIN`, `CF_ACCESS_AUD`, `OWNER_EMAIL`, and the base64 32-byte `MASTER_ENCRYPTION_KEY` secret. Apply migrations and deploy only after reviewing the target. Provider keys are encrypted and never echoed. Missing values remain unknown; estimated resets never imply recovered allowance. Password mode and extension push are deferred.

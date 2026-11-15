@@ -10,7 +10,7 @@ import { promisify } from 'node:util';
 const execute = promisify(execFile);
 const decoder = new TextDecoder('utf-8', { fatal: true });
 const functionalRoots = [
-  'src', 'crates', 'tests', 'fixtures', 'web', 'site', 'shared', 'scripts',
+  'server', 'migrations', 'src', 'crates', 'tests', 'fixtures', 'web', 'site', 'shared', 'scripts',
   '.github', 'app', 'worker', 'db', 'drizzle', 'public', 'browser-extension',
 ];
 const runtimeDirectories = new Set([
@@ -61,7 +61,7 @@ export function isFunctionalPath(relativePath) {
   if (!validRelativePath(relativePath)) return false;
   const parts = relativePath.split('/');
   if (parts.some(part => runtimeDirectories.has(part))) return false;
-  if (parts[0] === 'docs' || parts[0] === '.openai') return false;
+  if (parts[0] === 'legacy' || parts[0] === 'docs' || parts[0] === '.openai') return false;
   if (generatedDirectories.has(parts[0])) return false;
   if (parts.length > 1 && generatedContainers.includes(parts[0]) && generatedDirectories.has(parts[1])) return false;
   if (parts[0] === 'scripts' && generatedScriptDirectories.includes(parts[1])) return false;
@@ -152,6 +152,29 @@ export async function buildManifest(cwd = process.cwd()) {
   };
 }
 
+// Local development/sync only. Explicitly includes dirty and untracked working
+// source; never represents it as a clean release. Default buildManifest stays strict.
+export async function buildWorktreeManifest(cwd = process.cwd()) {
+  const root = decoder.decode(await git(cwd, ['rev-parse', '--show-toplevel'], 'git_repository_required')).trimEnd();
+  const commit = (await git(root, ['rev-parse', '--verify', 'HEAD'], 'committed_head_required')).toString('ascii').trim();
+  const paths = nulPaths(await git(root, ['ls-files', '--cached', '--others', '--exclude-standard', '-z', '--', ...untrackedPathspecs()]));
+  const files = [];
+  for (const relativePath of [...new Set(paths.filter(isFunctionalPath))].sort(comparePaths)) {
+    try { await lstat(path.join(root, relativePath)); }
+    catch (e) { if (e.code === 'ENOENT') continue; throw e; }
+    files.push({path: relativePath, sha256: sha256(await regularSourceBytes(root, relativePath))});
+  }
+  if (!files.length) fail('no_functional_source');
+  return {schema_version: 1, algorithm: 'sha256', source_git_commit: commit,
+    source_mode: 'worktree', functional_source_sha256: sha256(JSON.stringify(files)), files};
+}
+export async function verifyWorktreeManifest(value, cwd = process.cwd()) {
+  const expected = validateManifest(value);
+  const current = await buildWorktreeManifest(cwd);
+  if (JSON.stringify(expected) !== JSON.stringify(current.files)) fail('manifest_mismatch');
+  return {status: 'verified', source_mode: 'worktree', functional_source_sha256: current.functional_source_sha256};
+}
+
 function validateManifest(value) {
   if (!value || typeof value !== 'object' || value.schema_version !== 1 || value.algorithm !== 'sha256' ||
       typeof value.source_git_commit !== 'string' || !/^(?:[a-f0-9]{40}|[a-f0-9]{64})$/.test(value.source_git_commit) ||
@@ -185,19 +208,21 @@ export async function verifyManifest(value, cwd = process.cwd()) {
 }
 
 async function main(args) {
+  const worktree = args[0] === '--worktree';
+  if (worktree) args = args.slice(1);
   if (args.length === 1 && args[0] === '--help') {
-    console.log('Usage: node scripts/source-manifest.mjs [--verify <manifest.json>]\nRequires committed, clean functional source; emits JSON to stdout. No network.');
+    console.log('Usage: node scripts/source-manifest.mjs [--worktree] [--verify <manifest.json>]\nDefault: committed, clean functional source. --worktree: explicitly inspect dirty/untracked development source. Emits JSON to stdout. No network.');
     return;
   }
   if (args.length === 0) {
-    console.log(JSON.stringify(await buildManifest(), null, 2));
+    console.log(JSON.stringify(await (worktree ? buildWorktreeManifest() : buildManifest()), null, 2));
     return;
   }
   if (args.length !== 2 || args[0] !== '--verify' || !args[1]) fail('invalid_arguments');
   let value;
   try { value = JSON.parse(await readFile(args[1], 'utf8')); }
   catch { fail('invalid_manifest'); }
-  console.log(JSON.stringify(await verifyManifest(value), null, 2));
+  console.log(JSON.stringify(await (worktree ? verifyWorktreeManifest(value) : verifyManifest(value)), null, 2));
 }
 
 if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
