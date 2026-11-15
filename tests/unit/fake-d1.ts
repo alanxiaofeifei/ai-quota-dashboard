@@ -1,9 +1,10 @@
 // Real SQLite executes the production SQL. Only the D1 transport is replaced.
 import { DatabaseSync, type SQLInputValue } from 'node:sqlite';
 import { readFileSync } from 'node:fs';
-export function database(): D1Database {
+export function database(migrate=true): D1Database {
  const sqlite=new DatabaseSync(':memory:');
  sqlite.exec(readFileSync(new URL('../../migrations/0001_init.sql',import.meta.url),'utf8'));
+ if(migrate)sqlite.exec(readFileSync(new URL('../../migrations/0002_sync.sql',import.meta.url),'utf8'));
  const make=(sql: string,values: SQLInputValue[]=[]): D1PreparedStatement=>{
   const statement=()=>sqlite.prepare(sql);
   const run=()=>{const info=statement().run(...values);return {success:true,results:[],meta:{changes:Number(info.changes),last_row_id:Number(info.lastInsertRowid),duration:0,rows_read:0,rows_written:0,size_after:0,changed_db:true}}};

@@ -1,14 +1,45 @@
 {
   "manifest_version": 3,
-  "name": "AI Quota · 网页选区验证",
-  "version": "0.2.0",
-  "description": "阶段 0 实验工具：用户点击后仅读取官方 Usage 页的已选额度文本，在本机生成摘要。",
-  "permissions": ["activeTab", "scripting"],
+  "name": "AI Quota Sync",
+  "version": "1.1.0",
+  "description": "自动同步你教学的官方额度数值到自己的看板。仅读取指定显示元素。",
+  "permissions": [
+    "storage",
+    "alarms",
+    "tabs",
+    "scripting",
+    "notifications"
+  ],
+  "optional_host_permissions": [
+    "https://*/*"
+  ],
+  "background": {
+    "service_worker": "background.js",
+    "type": "module"
+  },
+  "options_page": "options.html",
   "action": {
-    "default_title": "读取选中的额度区域",
+    "default_title": "AI Quota Sync",
     "default_popup": "popup.html"
   },
+  "icons": {
+    "128": "icon.png"
+  },
   "content_security_policy": {
-    "extension_pages": "script-src 'self'; object-src 'none'; connect-src 'none'; base-uri 'none'"
+    "extension_pages": "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self'; connect-src https:; object-src 'none'; base-uri 'none'; frame-ancestors 'none'"
+  },
+  "commands": {
+    "_execute_action": {
+      "suggested_key": {
+        "default": "Alt+Q"
+      }
+    },
+    "open-mini-window": {
+      "suggested_key": {
+        "default": "Ctrl+Shift+9"
+      },
+      "global": true,
+      "description": "打开额度小窗口 / Open quota mini window"
+    }
   }
 }

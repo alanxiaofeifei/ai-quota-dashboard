@@ -1,7 +1,7 @@
 import { numeric, object, type Facts, type QuotaItem, type Unit } from '../../shared/contracts';
 import { AdapterError, fetchSafe } from '../fetch-safe';
 export interface AdapterResult {items: QuotaItem[]; facts: Facts}
-export const credentialKind=(type: string)=>type==='openrouter_credits'?'management_bearer':'bearer';
+export const credentialKind=(type:string,slot='key')=>type==='openrouter_credits'||type==='openrouter'&&slot==='management'?'management_bearer':'bearer';
 function item(id: string, value: unknown, unit: Unit): QuotaItem {return {id,label:id,amount:numeric(value),unit,resetAt:null}}
 function bool(v: unknown): boolean | null {if(v===undefined || v===null)return null; if(typeof v!=='boolean')throw new AdapterError('invalid_response');return v}
 export async function fetchQuota(type: string, region: string, secret: string): Promise<AdapterResult> {
@@ -17,12 +17,14 @@ export async function fetchQuota(type: string, region: string, secret: string): 
    return {items,facts:{available:bool(d.is_available)}};
   }
   if(type==='openrouter_key' || type==='openrouter_credits') {
-   const d=object(object(await fetchSafe(`https://openrouter.ai/api/v1/${type==='openrouter_key'?'key':'credits'}`,secret)).data);
+   let raw;try{raw=await fetchSafe(`https://openrouter.ai/api/v1/${type==='openrouter_key'?'key':'credits'}`,secret)}catch(e){if(e instanceof AdapterError&&e.code==='unauthorized')throw new AdapterError('wrong_key_type');throw e}
+   const d=object(object(raw).data);
+   if(type==='openrouter_key'&&d.is_management_key===true)throw new AdapterError('wrong_key_type');
    if(type==='openrouter_key') {
     const remaining=item('key_remaining',d.limit_remaining,'USD'); remaining.limit=numeric(d.limit);remaining.used=numeric(d.usage);
     const reset=d.limit_reset;
     if(reset!=null && !['daily','weekly','monthly'].includes(String(reset)))throw new AdapterError('invalid_response');
-    return {items:[remaining,item('usage',d.usage,'USD'),item('limit',d.limit,'USD')],facts:{freeTier:bool(d.is_free_tier),limitReset:reset==null?null:reset as 'daily'|'weekly'|'monthly'}};
+    return {items:[remaining,item('usage',d.usage,'USD'),item('limit',d.limit,'USD')],facts:{freeTier:bool(d.is_free_tier),limitReset:reset==null?null:reset as 'daily'|'weekly'|'monthly',...(d.limit===null?{keyUnlimited:true}:{})}};
    }
    const total=numeric(d.total_credits), used=numeric(d.total_usage);
    return {items:[item('account_remaining',total===null||used===null?null:Number(total)-Number(used),'USD'),item('total_credits',total,'USD'),item('total_usage',used,'USD')],facts:{}};
@@ -46,4 +48,12 @@ export function parseSiliconFlow(value: unknown,region: 'cn'|'com'): AdapterResu
  if(r.code!==undefined && r.code!==0 && r.code!==20000)throw new AdapterError('upstream_error');
  const d=object(r.data),unit=region==='com'?'USD':'CNY';
  return {items:[item('totalBalance',d.totalBalance,unit),item('chargeBalance',d.chargeBalance,unit),item('balance',d.balance,unit)],facts:{}};
+}
+
+// Unified account primary. Normal-key limits remain explicitly secondary.
+export async function fetchOpenRouter(slots:{management?:string;key?:string}):Promise<AdapterResult> {
+ const account=slots.management?await fetchQuota('openrouter_credits','cn',slots.management):{items:[item('account_remaining',null,'USD')],facts:{}};
+ if(!slots.key)return account;
+ const key=await fetchQuota('openrouter_key','cn',slots.key);
+ return {items:[...account.items,...key.items],facts:{...account.facts,...key.facts,...(key.facts.keyUnlimited?{keyUnlimited:true}:{})}};
 }
