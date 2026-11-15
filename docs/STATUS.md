@@ -12,3 +12,10 @@
 
 ## CI 工作流待替换（2026-11-15）
 盒子上的 GitHub OAuth 令牌没有 `workflow` 权限，不能推送 `.github/workflows/` 的改动。新 CI 定义放在 `docs/ci/ci.yml`；旧的 Rust/Windows 工作流 “Local prototype and offline checks” 已在 GitHub Actions 中停用（代码已移到 `legacy/`）。授予 `workflow` 权限后：把 `docs/ci/ci.yml` 移到 `.github/workflows/ci.yml`，删除旧 `windows-noauth.yml`，再重新启用 Actions 工作流。本地门禁（typecheck / 单测 / build / 扩展与 manifest 测试）已在 PR 中记录。
+
+## 部署检查点（2026-11-15 20:20 UTC+8）
+- 公开仓 PR #2 已合并（fbbe59e）；个人仓 PR #2 已合并（40c55b5），core-backup 指纹已验证。
+- 个人实例已部署：https://quota.alanzhu.dev（Worker `alanpersonal-quota`，版本 de7647aa，D1 `alanpersonal-quota` 迁移 0001 已应用，`MASTER_ENCRYPTION_KEY` 已设置，无 Cron）。
+- 线上验证：未登录访问 `/`、`/api/overview`、静态资源、`/healthz` 均 302 到 Cloudflare Access 登录；伪造 JWT 头同样被拦；workers.dev 404。登录后的界面和 Worker 内 JWT 校验尚未在线上验证（需 Alan 登录）。
+- DeepSeek 适配器已用盒子上的真实 Key 在本地调用官方接口验证通过（只核对字段，不输出数值）；线上需 Alan 在页面里录入 Key。
+- 下一步：Alan 登录验收；Phase 2（扩展一键推送、组织级 Admin API、火山/阿里 AK/SK、可选 Cron、密码登录模式）；授予 `workflow` 权限后启用 docs/ci/ci.yml。
