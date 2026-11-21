@@ -17,3 +17,5 @@ export function relativeTime(value,now=Date.now()){
 const badges={ok:{label:'正常',tone:'ok'},stale:{label:'已过期',tone:'warn'},error:{label:'读取失败',tone:'danger'},login_required:{label:'需要登录',tone:'danger'},layout_changed:{label:'需要重新教学',tone:'warn'},offline:{label:'扩展离线',tone:'warn'}};
 export function badge(state){return badges[state]??badges.error}
 export function overallState(providers){return ['error','login_required','layout_changed','offline','stale'].find(state=>providers.some(p=>p.status===state))??(providers.length?'ok':'stale')}
+
+export const reasonText=reason=>({permission_required:'需授权：点获取当前页并允许网站权限',login_required:'需登录：打开官方页重新登录',layout_changed:'页面改版：请核对页面或重新教学',timeout:'超时：打开页面后重试',no_data:'此页没有可识别的额度数字；可用教学后备',account_mismatch:'账户地址不匹配，请核对 authuser 或 /u/N/',disabled:'未启用：在设置中启用来源',management_key_required:'账户余额需要 Management Key；也可从官方 credits 页读取',network:'网络或上传失败：请重试',not_synced:'尚未同步：打开官方页并授权读取',pending:'等待同步',reading:'正在读取',ok:'同步成功'})[reason]??'读取失败，请重试';

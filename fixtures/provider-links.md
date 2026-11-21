@@ -16,3 +16,10 @@ Login-gated pages redirect to sign-in = OK. SPA consoles return 200 for any path
 | Moonshot/Kimi (intl) | https://platform.kimi.ai/console/account | https://platform.kimi.ai/console/api-keys | https://platform.kimi.ai/docs/api/balance | login redirect |
 | OpenRouter | https://openrouter.ai/settings/credits | normal: https://openrouter.ai/settings/keys ; management: https://openrouter.ai/settings/management-keys (provisioning-keys redirects here) | /api/v1/credits "Management key required" (403 "Only management keys can perform this operation"): https://openrouter.ai/docs/api/api-reference/credits/get-credits ; /api/v1/key = this key's limit/usage: https://openrouter.ai/docs/api/api-reference/api-keys/get-current-api-key ; https://openrouter.ai/docs/guides/overview/auth/management-api-keys | all sign-in redirects; docs 200 |
 | SiliconFlow | https://cloud.siliconflow.cn/account/balance (intl .com) | https://cloud.siliconflow.cn/account/ak | https://docs.siliconflow.cn/docs/release-notes/overview (/user/info retired 2026-08-14) | login redirect |
+
+
+## v1.2 preset evidence (2026-11-21)
+
+The official page URLs above are the allowlist reference for `browser-extension/presets.mjs`. `tests/fixtures/provider-pages/*.html` are deliberately synthetic label/value contracts, not captures from logged-in production pages. Account-specific Google URL variants append numeric `authuser=N` or insert `/u/N/`; no email is collected.
+
+Gemini's default card/source entry now opens https://aistudio.google.com/usage. Its chat app has no supported balance reading. Google official usage documentation https://aistudio.google.com/docs/get-started and billing https://aistudio.google.com/docs/billing were rechecked via public documentation. Current billing documentation includes prepay and eligible postpay, so the task's blanket postpaid assumption is stale. The preset reads visible request/token usage only, never infers a money balance or a personal subscription allowance. OpenRouter preset: Total Credits Available → USD; GLM current balance → CNY. Other preset labels require owner verification on real logged-in pages.

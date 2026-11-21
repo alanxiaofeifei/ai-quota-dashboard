@@ -22,7 +22,7 @@ try {
  await page.click('.intro-actions .primary');await page.waitForSelector('dialog[open]');assert.equal(await page.$eval('input[type=password]',el=>el.autocomplete),'new-password');await page.type('input[type=password]','SYNTHETIC_BROWSER_ONLY');
  await page.click('dialog .full');await page.waitForSelector('dialog .alert');assert.equal(await page.$eval('input[type=password]',el=>el.value),'');assert.match(await page.$eval('dialog .alert',el=>el.textContent),/Demo mode/);checks.push('demo key test rejected and input cleared');
  await page.keyboard.press('Escape');assert.equal(await page.$('dialog'),null);checks.push('Escape closes dialog');
- await page.click('.card:first-child .card-actions button');await page.waitForSelector('dialog.drawer[open]');assert.equal(await page.$$eval('fieldset',els=>els.length),3);checks.push('manual drawer and extension paste input render');await page.keyboard.press('Escape');
+ await page.click('.card:first-child .card-actions button:last-of-type');await page.waitForSelector('dialog.drawer[open]');assert.equal(await page.$$eval('fieldset',els=>els.length),3);checks.push('manual drawer and extension paste input render');await page.keyboard.press('Escape');
  await page.click('[aria-label="切换中文"]');await page.click('[aria-label="切换深色"]');
  await page.setViewport({width:390,height:844,deviceScaleFactor:1});await page.reload({waitUntil:'networkidle0'});await page.waitForSelector('.card');
  assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth),true);assert.equal(await page.$eval('.grid',el=>getComputedStyle(el).gridTemplateColumns.split(' ').length),1);checks.push('390px single column without horizontal overflow');

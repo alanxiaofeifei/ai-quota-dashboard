@@ -1,0 +1,18 @@
+[
+ {"id":"chatgpt","label":"Weekly limit","value":"37% left Resets in 3d 4h","metric":"weekly_percent","amount":37,"unit":"percent"},
+ {"id":"codex","label":"5-hour limit","value":"12% used Resets in 2h 15m","metric":"five_hour_percent","amount":88,"unit":"percent"},
+ {"id":"claude","label":"Current session","value":"16% used","metric":"five_hour_percent","amount":84,"unit":"percent"},
+ {"id":"gemini","label":"Total API Requests","value":"42 requests","metric":"requests","amount":42,"unit":"requests"},
+ {"id":"glm","label":"当前余额","value":"73.26 元","metric":"balance","amount":73.26,"unit":"CNY"},
+ {"id":"glm-coding","label":"Weekly limit","value":"29% remaining Resets in 1d 2h","metric":"weekly_percent","amount":29,"unit":"percent"},
+ {"id":"openrouter","label":"Total Credits Available","value":"$8.47","metric":"account_remaining","amount":8.47,"unit":"USD"},
+ {"id":"deepseek","label":"可用余额","value":"24.62 CNY","metric":"balance","amount":24.62,"unit":"CNY"},
+ {"id":"moonshot","label":"账户可用余额","value":"32.75 元","metric":"balance","amount":32.75,"unit":"CNY"},
+ {"id":"moonshot-intl","label":"Available Balance","value":"$4.12","metric":"balance","amount":4.12,"unit":"USD"},
+ {"id":"grok","label":"Credit balance","value":"$11.25","metric":"balance","amount":11.25,"unit":"USD"},
+ {"id":"doubao","label":"账户余额","value":"43.92 元","metric":"balance","amount":43.92,"unit":"CNY"},
+ {"id":"qwen","label":"可用余额","value":"64.38 元","metric":"balance","amount":64.38,"unit":"CNY"},
+ {"id":"bailian","label":"Total tokens","value":"920 tokens","metric":"tokens","amount":920,"unit":"tokens"},
+ {"id":"siliconflow","label":"账户余额","value":"2.50 CNY","metric":"balance","amount":2.5,"unit":"CNY"},
+ {"id":"siliconflow-intl","label":"Available Balance","value":"3.25 USD","metric":"balance","amount":3.25,"unit":"USD"}
+]
