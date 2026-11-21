@@ -33,14 +33,12 @@ source-manifest 本地验证显式使用 `--worktree`，默认发布模式继续
 
 ## 待 Alan / 集成者验收
 
-1. 明确是否允许本轮提交、推送并开单一 PR（不合并）；准备好的标题与正文保存在 `/workspace/quota-20261115/p12/PR_BODY.md`，完成记录在同目录 DONE.md。
-2. 在独立个人仓同步并先应用 0003，再部署；保持原主密钥，Access 仍仅 `/api/ext/*` Bypass。此步骤不在当前会话授权范围。
-3. 真实登录页验证 OpenRouter、GLM、Coding Plan、ChatGPT/Codex、Claude、AI Studio、DeepSeek、Kimi、xAI、火山、阿里云 / 百炼及 SiliconFlow 标签与布局。合成夹具只验证明确标签 / 数值契约。
-4. 核对两个 Google 账户的 URL 序号、标签及实际登录账号；增删账号可能改变序号。其他平台共享相同 URL 的不同账户必须使用独立 Chrome 配置文件，或禁用自动读取、逐账户手动获取。扩展不读取身份信息，不能凭标签证明登录身份。
-5. 订阅卡片保留最后成功的一组来源指标；ChatGPT / Codex 若需分别长期保留，建立两张卡片并各绑定来源。预计重置到达仍需重新确认。
+- 已完成提交与合并（`b58a28d`）、个人实例部署和扩展发布。[PR #14](https://github.com/alanxiaofeifei/ai-quota-dashboard/pull/14) · [个人实例](https://quota.alanzhu.dev) · [Release v1.2.0](https://github.com/alanxiaofeifei/ai-quota-dashboard/releases/tag/v1.2.0)
+- 待 Alan 按[中文教程](extension-guide.zh.md)安装 v1.2.0 并配对，在各服务商的真实官方登录页实测预设、读数及两个 Google 账号的绑定。[验收 #13](https://github.com/alanxiaofeifei/ai-quota-dashboard/issues/13)
+  - 核对 OpenRouter、GLM、Coding Plan、ChatGPT/Codex、Claude、AI Studio、DeepSeek、Kimi、xAI、火山、阿里云 / 百炼及 SiliconFlow 的标签与布局。合成夹具只验证明确标签和数值契约。
+  - 核对两个 Google 账号的 URL 序号、标签及实际登录账号。其他平台共享相同 URL 的不同账号可使用独立 Chrome 配置文件，或关闭自动读取、逐账号手动获取。若要分别保留 ChatGPT 和 Codex 的读数，使用两张绑定各自来源的卡片。预计重置时间到达后仍需重新确认。
+- 根据实测反馈修预设，再做 [#12 托盘伴侣](https://github.com/alanxiaofeifei/ai-quota-dashboard/issues/12)。
 
 ## 模型与上下文记录
 
 任务指定的 Phase 1.1 已验证基线是 Codex CLI gpt-6.1-sol / reasoning high（并说明 agy 当日 Google 浏览器验证不可用）。本会话没有工具可核实精确模型 / 档位、上下文占用、费用或额度，没有切换模型，也不将历史基线冒称本轮实际配置。以本仓门禁及合成浏览器检查作为本轮证据。未使用子 Agent。未声称已执行原生压缩。
-
-下一步：先读取 `/workspace/quota-20261115/p12/DONE.md` 并核对工作树；若取得 GitHub 写入授权，再按逻辑提交、推送当前分支并创建单一 PR，保持不合并 / 不发布。
