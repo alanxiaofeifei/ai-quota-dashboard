@@ -1,8 +1,15 @@
-# 当前检查点 · v1.2 本地实现，待授权 GitHub 交付
+# 当前检查点 · v1.2 已合并、部署并发布，待 Alan 真实登录验收
 
-2026-11-21（Asia/Bangkok）。入口：[总单 #13](https://github.com/alanxiaofeifei/ai-quota-dashboard/issues/13)，修复范围 #5–#11；[#12](https://github.com/alanxiaofeifei/ai-quota-dashboard/issues/12) 仅 [托盘设计](tray-plan.md)。分支 `feat/v1-2-extension-ux`，起点 / 当前已提交 HEAD `0aae092c7daca8b245f072e62e0492237aa48493`。本轮代码、测试与文档均为**未提交工作树**。
+2026-11-21（Asia/Bangkok）。入口：[总单 #13](https://github.com/alanxiaofeifei/ai-quota-dashboard/issues/13)。#5–#11 由 [PR #14](https://github.com/alanxiaofeifei/ai-quota-dashboard/pull/14) 关闭（合并提交 `b58a28d`，CI 通过；模型选择见 PR 评论）。[#12](https://github.com/alanxiaofeifei/ai-quota-dashboard/issues/12) 只有 [托盘设计](tray-plan.md)，未实现。
 
-当前会话用户给出的规则要求仅本地、不提交 / 推送 / GitHub 写入，而 p12 任务要求提交、推送并开 PR。已在开工时请求澄清，未收到覆盖本地限制的答复，因此暂不执行这些写操作。没有同步个人仓、合并、远程 Wrangler、D1 远程写入、部署或 Release；不把本地验证说成线上已通过。
+- 个人仓已用 `sync-personal.mjs` 同步（功能源码指纹 `2277e0b3…`）。D1 已应用 `0003_extension_accounts.sql`，应用前已备份。Worker `alanpersonal-quota` 版本 `9d4930a4-3142-417a-8efa-df9b58504d57` 已部署到 https://quota.alanzhu.dev。
+- 线上检查：未登录访问 `/`、`/api/overview`、`/?pair=1` 会 302 到 Access 登录页；`/api/ext/summary`、`/api/ext/hello` 不带设备令牌返回 401。D1 数据行数和部署前一致。
+- 扩展：[Release v1.2.0](https://github.com/alanxiaofeifei/ai-quota-dashboard/releases/tag/v1.2.0)，ZIP SHA-256 `b691919dffe2848aa3e9c4be4732a1198beab96396cc6d0a0720d7bf506985ae`。
+- 待验收：各家真实登录页面的 DOM 和数值、两个 Google 账号，以及 OpenRouter 是否改用 Management Key 或页面预设，都要等 Alan 实测。生产数据显示：OpenRouter 目前只存了普通 Key；GLM 和 Gemini 的旧来源是关闭状态、也没有教过读取位置。v1.2 的预设需要 Alan 在扩展里重新添加或启用来源，并授权访问对应网站。
+
+## 下一步
+1. Alan 按 `docs/extension-guide.zh.md` 安装 v1.2.0、配对，再在各官方页点「一键获取当前页数据」，反馈结果。
+2. 根据反馈修预设；之后做 #12 托盘伴侣。
 
 ## 已完成
 
