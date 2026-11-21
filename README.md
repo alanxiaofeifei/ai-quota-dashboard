@@ -71,27 +71,24 @@ npx wrangler dev --local --var AUTH_MODE:demo
 
 订阅选择对应平台添加，再点“更新数值”。空白表示未知；可分别录入 5 小时 / 周百分比、credits、余额或资源数量。每个指标的重置输入支持 `3d 4h`、`2h 15m`、带时区 ISO 时间，或本地日期选择器；相对时间在保存时转换为绝对时间。
 
-## 自动连接浏览器扩展
+## 自动连接浏览器扩展 · v1.2
 
-1. 从 GitHub Release 附件（如已发布）或 Actions 的 `ai-quota-sync-extension` artifact 下载 zip 并解压；或使用本地 `browser-extension/`。`npm run build:extension` 输出 `dist/ai-quota-sync-extension.zip`。
-2. `chrome://extensions` → 开发者模式 → 加载已解压的扩展程序 → 选择目录并固定图标。
-3. 看板「连接浏览器扩展」→ 创建设备配对码 → 扩展「配对与设置」粘贴连接。码仅显示一次，请勿分享；可在看板列出 / 撤销设备。
-4. 添加订阅卡片，打开其官方额度页登录，点扩展「教我读取」后点击数值；再次打开弹窗确认预览并命名。多个指标可重复教学。配置和教学保存在看板，扩展重装后可恢复。看板设置与扩展设置都能编辑来源 URL、解析方式、间隔（全局默认 60 分钟，范围 15–10080；每个来源可选择继承默认或单独覆盖）和启用状态。
+完整步骤见 **[中文图文教程](docs/extension-guide.zh.md)**：安装 ZIP 并固定 → 连接你自己的看板 → 授权官方网站 → 一键获取。教程包含多账户、教学后备和逐项排障，截图全部是新 UI 的合成数据。
 
-**浏览器必须运行；每站登录一次且会话仍有效即可。额度页面无需常开，扩展会自行打开后台标签页并在读取后关闭；已打开的同 URL 标签页会复用且不导航、不关闭。网站登出后重新登录一次。浏览器关闭期间不读取；页面改版可能需要重新教学，看板会明确提醒。** 启用或教学时只申请该网站权限；仅读取指定显示值，无 Cookie / Session、页面存储或整页正文读取。
+1. `npm run build:extension` 生成 `dist/ai-quota-sync-extension.zip`；解压后在 `chrome://extensions` 开启开发者模式，加载目录并固定图标。维护者发布后也可从 Release / Actions 下载。
+2. 扩展填写私人看板地址，点「打开看板创建配对码」，会打开 `<看板>/?pair=1` 并弹出配对对话框。创建设备码后回到扩展设置粘贴连接。**码相当于设备密码，只显示一次，勿分享或截图外传。**
+3. 打开官方额度页并登录，点扩展「添加为来源并授权」（没有来源时）→「一键获取当前页数据」。已有卡片的预设默认启用，首次仍需授权；扩展设置提供每站「授权并启用此网站」。
+4. 日常点「全部同步」，逐行查看成功或失败原因。每个账户独立建卡；例如 Google 个人 / Google 工作使用各自的 `authuser=N` 或 `/u/N/` 地址，并核对当前登录账户。教学只在预设读不到时使用：点击单个数字 → 预览数值与单位 → 确认保存。
 
-操作者须应用 D1 **0002_sync.sql**，并在 Cloudflare Access 添加 **仅 `/api/ext/` 子路径** 的 Bypass（例如 `your-domain/api/ext/*` 应用），其余 HTML、静态资源、`/api/*` 保持 Access 保护。Worker 仍对扩展路径检查独立设备 Bearer；设备令牌不能访问普通 API，Access JWT 不能替代设备令牌。不要放宽成整个 `/api/*`。
+**浏览器需开着、各家登录一次即可、额度页不必开着。** 会话过期需重新登录。扩展复用匹配页面，或自行打开临时后台页读完关闭；不读 Cookie、Session、存储或整页正文。失败保留上次成功值，重置到期仍需重新确认，单位不换算。
 
-扩展默认显示「灵动岛」摘要：本机缓存立即呈现，再从看板更新。每个服务商单独显示余量与单位、实时重置倒计时、状态和上次成功同步时间；点行打开官方用量页。顶部可打开完整看板、立即同步或进入 ⚙ 设置；在匹配来源域名的页面可进入「教我读取此页」，设置页也保留教学入口。重置时间到达仅提示重新确认，失败保留上次成功值。
+![额度摘要弹窗（400 × 600，合成数据）](docs/images/guide/island-paired.png)
 
-工具栏点击或 **Alt+Q** 打开摘要；**Ctrl+Shift+9** 打开独立小窗口（重复调用复用窗口）。快捷键可在 `chrome://extensions/shortcuts` 修改；全局快捷键仅在 **Chrome 运行时** 有效，Chrome 可以未聚焦。小窗口**不置顶**。托盘常驻程序留到 [Phase 2 · Issue #1](https://github.com/alanxiaofeifei/ai-quota-dashboard/issues/1)。
+工具栏或 Alt+Q 打开约 400 × 600 的摘要，内部滚动；「打开独立小窗口」或 Ctrl+Shift+9 打开默认 440 × 640、可调整大小的同布局窗口。快捷键在 `chrome://extensions/shortcuts` 修改。Chrome 必须运行，小窗口不置顶；Windows 托盘伴侣目前仅有 [Issue #12 设计](docs/tray-plan.md)。
 
-![额度摘要弹窗（360px，合成数据）](docs/images/island-popup.png)
-![独立额度小窗口（380 × 560，合成数据）](docs/images/island-mini-window.png)
+自建者需应用 D1 **0001、0002、0003**；沿用加密主密钥和现有绑定。Cloudflare Access 仅为 **`/api/ext/*`** 配置 Bypass，其余 API、HTML 和静态资源继续保护。扩展入口始终单独校验设备令牌，不能使用 Access JWT 代替。协议与兼容性见 [技术说明](docs/extension.md)。
 
-完整安装、教学、告警、隐私与截图见 [扩展指南](docs/extension.md)。旧 ChatGPT 摘要 JSON 粘贴入口仍兼容。
-
-OpenRouter 合并为一张卡片，分别保存可选的 Management Key 与普通 Key；账户余额只来自 Management Key 的 `/credits`，显示「已充值 / 已使用」。普通 Key 只显示此 Key 的消费上限 / 已用 / 剩余上限，不能代表账户余额。仅普通 Key 时主数值显示「账户余额不可用」，附创建 Management Key 链接。旧两类记录由迁移 0002 合并，原密钥保留，旧快照清除后重新读取。
+OpenRouter 的账户 API 余额只来自 Management Key 的 `/credits`；普通 Key 预算单独显示。未取得账户余额时明确提示「账户余额需要 Management Key」，提供创建链接；也能授权读取 [官方 Credits 页](https://openrouter.ai/settings/credits) 的 Total Credits Available。可用 API 余额优先，页面余额为后备，标明来源。Gemini 主入口为 [AI Studio 用量](https://aistudio.google.com/usage)，展示 requests / tokens 用量，不把它们当成余额。
 
 ## 平台覆盖
 
@@ -128,9 +125,4 @@ git diff --check
 
 A self-hosted, single-owner Cloudflare Workers + D1 quota dashboard. Run the local synthetic demo with `npm ci`, `npm run build`, then `npx wrangler dev --local --var AUTH_MODE:demo`. No secrets or provider calls are used in demo mode.
 
-Deploy your own D1 database, replace the placeholder ID in a private config, protect the entire custom domain with Cloudflare Access, set `AUTH_MODE=access`, `CF_ACCESS_TEAM_DOMAIN`, `CF_ACCESS_AUD`, `OWNER_EMAIL`, and the base64 32-byte `MASTER_ENCRYPTION_KEY` secret. Apply migrations and deploy only after reviewing the target. Provider keys are encrypted and never echoed. Missing values remain unknown; estimated resets never imply recovered allowance. Password mode is deferred. AI Quota Sync provides automatic browser extension sync: download/unzip the Release attachment (if published) or Actions artifact, or use `browser-extension/`; open `chrome://extensions` → Developer mode → Load unpacked and pin the icon. Create a pairing code in the dashboard and paste it in extension Settings. On each official usage page, sign in, click Teach in the popup, click a value, then reopen the popup to confirm and name it. Add multiple metrics as needed. Sources and locators are saved in the dashboard; the global interval defaults to 60 minutes (15–10080), with optional per-source overrides. Existing sources retain their intervals; new sources inherit the global default.
-
-**The browser must be running. Each site needs one login while its session stays valid. Usage pages need not stay open: the extension opens and closes background tabs itself. Re-login after session expiry; page redesigns may require re-teaching, with clear dashboard alerts.** Apply migration 0002 and configure a Cloudflare Access bypass for **only `/api/ext/` and subpaths**. Keep every other path protected. Device Bearer tokens, per-origin optional permissions and strict payload projection protect extension sync. See the [extension guide with screenshots](docs/extension.md).
-
-
-The default popup is a compact cached quota summary with live reset countdowns, unit-separated values, sync age and failure badges. Click a provider to open its official usage page. **Alt+Q** opens the popup; **Ctrl+Shift+9** opens or focuses a reusable mini window. Customize shortcuts at `chrome://extensions/shortcuts`. Global shortcuts work only while Chrome is running, even unfocused; the mini window is **not always-on-top**. A tray companion is [Phase 2 (Issue #1)](https://github.com/alanxiaofeifei/ai-quota-dashboard/issues/1). Teach remains available from matching pages and extension Settings. Both dashboard sync settings and extension Settings edit the same global interval and per-source overrides. [Popup screenshot](docs/images/island-popup.png) · [Mini-window screenshot](docs/images/island-mini-window.png) (synthetic data).
+Deploy your own D1 database, replace the placeholder ID in a private config, protect the entire custom domain with Cloudflare Access, set `AUTH_MODE=access`, `CF_ACCESS_TEAM_DOMAIN`, `CF_ACCESS_AUD`, `OWNER_EMAIL`, and the base64 32-byte `MASTER_ENCRYPTION_KEY` secret. Apply migrations and deploy only after reviewing the target. Provider keys are encrypted and never echoed. Missing values remain unknown; estimated resets never imply recovered allowance. Password mode is deferred. AI Quota Sync v1.2 uses built-in official-page presets: install/unzip, pair from your dashboard's `?pair=1` dialog, grant each site's permission, then Get current page or Sync all. Separate accounts use separate cards and labels; Google URLs retain `authuser=N` or `/u/N/`. Teaching is a fallback with a value/unit preview. Read the [illustrated Chinese guide](docs/extension-guide.zh.md) and [protocol notes](docs/extension.md). Browser pages and screenshot data are synthetic in automated checks; live logged-in verification remains the owner's step. Apply migrations 0001–0003 before upgrading.

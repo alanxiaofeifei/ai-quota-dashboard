@@ -1,6 +1,6 @@
 # 服务商接口矩阵
 
-2026-11-15 只读核对官方文档；没有使用真实 Key、付费推理或调用实际余额接口。订阅与 API 余额是不同计量体系，不交叉换算。表中「手动」表示无公开余额 API，也可通过浏览器扩展教学后自动同步官方页显示值。
+2026-11-15 只读核对官方文档；没有使用真实 Key、付费推理或调用实际余额接口。订阅与 API 余额是不同计量体系，不交叉换算。表中「手动」表示无公开余额 API，也可通过浏览器扩展预设（教学作后备）自动同步官方页显示值。
 
 | 平台 | Phase 1 / 官方接口或使用页 | 字段与说明 | 官方文档 |
 | --- | --- | --- | --- |
@@ -10,7 +10,7 @@
 | SiliconFlow | **手动**，cn/com；不发送 API 密钥 | 历史字段 totalBalance / chargeBalance / balance 分别录入，cn CNY / com USD。官方旧 `/user/info` 已停用，无可核实的替代余额接口，当前不请求该地址。 | [官方停用公告](https://docs.siliconflow.cn/docs/release-notes/overview)、[历史 schema](https://siliconflow.readme.io/reference/user-info) |
 | ChatGPT / Codex | 扩展自动同步 + 手动 / 旧摘要兼容；[Usage](https://chatgpt.com/settings/usage?tab=overview) | 5h %、weekly %、独立 credits、各自 reset。扩展支持教学与 ChatGPT/Codex 预设；缺失 5h 不生成数值。 | [Usage limits](https://help.openai.com/en/articles/20001625-understanding-chatgpt-and-codex-usage-limits) |
 | Claude | 手动；[Usage](https://claude.ai/settings/usage) | 5h / weekly %、credits、reset。个人订阅没有采用内部接口。 | [官方使用限制说明](https://support.claude.com/en/articles/11647753) |
-| Gemini / Google AI Pro | 手动；[Gemini](https://gemini.google.com/app) | 5h / weekly %、credits、reset（仅录入实际页面提供的数据，缺失留空）。 | [Google 官方说明](https://support.google.com/gemini/answer/16275805) |
+| Gemini / Google AI Pro | 扩展 / 手动；[AI Studio usage](https://aistudio.google.com/usage) | requests / tokens 用量独立显示，不称作余额或订阅剩余。Gemini 应用页无本项目可读余额。 | [Google 官方说明](https://support.google.com/gemini/answer/16275805) |
 | Grok | 手动；[Grok](https://grok.com/) | 独立窗口百分比、credits、reset；不读取网页会话。 | [官方使用限制](https://docs.x.ai/overview) |
 | GLM / Coding Plan | 手动；[BigModel](https://bigmodel.cn/finance-center/finance/overview) | bigmodel CNY 余额与 Coding Plan 5h / weekly % / credits 分桶；不接入未公开 monitor 端点。 | [Coding Plan](https://docs.bigmodel.cn/cn/coding-plan/overview) |
 | Doubao / Volcengine | Phase 1 手动；[费用中心](https://console.volcengine.com/finance/fund/overview) | CNY 账户余额和独立 credits；需要 IAM AK/SK 的 QueryBalanceAcct 放 Phase 2。 | [QueryBalanceAcct](https://www.volcengine.com/docs/6269/116398)、[方舟计费](https://www.volcengine.com/docs/82379/1099475) |
@@ -30,3 +30,11 @@
 ## Phase 1.1 链接与密钥指引
 
 完整的已验证链接冻结在 [provider-links](../fixtures/provider-links.md)，catalog 测试逐项核对；区域链接由 providerLinks 生成。GLM 同时提供 [余额](https://bigmodel.cn/finance-center/finance/overview) 与 [Coding Plan 用量](https://www.bigmodel.cn/coding-plan/personal/usage)。Moonshot 国内控制台为 platform.kimi.com，国际 platform.kimi.ai，API 主机仍分别 api.moonshot.cn / api.moonshot.ai。DeepSeek 与 Moonshot 的余额均为账户级，任意该账户 API Key 可用，推荐单独创建 quota-dashboard Key；Moonshot 两区域 Key 不通用。OpenRouter 账户必须创建 Management Key，普通 Key 的消费上限与充值余额无关。UI 添加对话框提供中文 / English 指引及创建密钥、用量与文档链接。
+
+## v1.2 页面预设与账户（2026-11-21）
+
+新增各家官方页预设和 [中文图文教程](extension-guide.zh.md)。具体 URL 模式与指标单位在 `browser-extension/presets.mjs`，HTML 合成夹具在 `tests/fixtures/provider-pages/`；这表示已实现并验证解析契约，不表示真实登录后 DOM 已逐家验收。Claude、xAI、火山、阿里云、百炼、SiliconFlow 等页若没有唯一可见的已知标签，会返回「此页没有可识别的额度数字」，不能猜测余额。
+
+GLM 财务页读取「当前余额」CNY；Coding Plan 百分比只在明确剩余 / 已用语义时读取。OpenRouter 页面读取 Total Credits Available USD，与 `/credits` API 账户余额语义相同，API 有值时优先 API；普通 Key 预算始终次级。页面快照与 API 快照分开保存（迁移 0003），失败不覆盖最后成功值。所有 API 类卡片也可选择仅通过扩展读官方页，无需提交推理 Key。
+
+Google 官方 [AI Studio 入门](https://aistudio.google.com/docs/get-started) 与 [计费说明](https://aistudio.google.com/docs/billing) 已重新核对。用量入口为 AI Studio；现行说明涉及预付费及部分账户后付费，不能再把“所有付费 API 账户均后付费”作为假设。该预设只读取明确展示的请求 / token 用量，不根据付款模式推断余额，不把 Gemini / Google AI Pro 订阅与 API 项目用量混同。每张卡片保存用户输入账户标签，Google 地址保留 `authuser=N` 或 `/u/N/`；序号不证明真实账户身份，需用户核对。

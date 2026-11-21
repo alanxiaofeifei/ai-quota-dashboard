@@ -1,7 +1,7 @@
 # AI Quota Dashboard 项目规则
 
-- 本项目是 Cloudflare Workers + React/Vite + D1 的单所有者额度看板；当前范围为 Phase 1.1。
-- 任务入口：`/workspace/quota-20261115/p11/TASK.md`。本次任务只在本地工作，不提交、不推送、不发布、不运行远程 Wrangler 或 GitHub 写入；该约束优先于下方通用 GitHub 留痕偏好。
+- 本项目是 Cloudflare Workers + React/Vite + D1 的单所有者额度看板；当前范围为 v1.2 扩展验收修复。
+- 任务入口：GitHub issues / PRs；遵循 `docs/STATUS.md` 的当前检查点与会话明确约束。
 - `legacy/rust-prototype/` 仅归档，禁止纳入当前 CI / Worker 构建。扩展继续独立运行 Node 测试。
 - 使用官方公开余额 API；固定 HTTPS 地址，不跟随重定向，不读取 Cookie、Session 或内部监控接口。
 - 缺失与失败不能变成 0 或 100%；已到预计重置时间仍需重新确认；percent / credits / CNY / USD 不混合。
