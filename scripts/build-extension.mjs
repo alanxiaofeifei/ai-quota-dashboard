@@ -1,7 +1,7 @@
 // Portable ZIP (stored entries): no system zip utility or platform dependency.
 import {mkdir,readFile,writeFile} from 'node:fs/promises';
 const root=new URL('../browser-extension/',import.meta.url);
-const files=['background.js','client.mjs','icon.png','island.mjs','manifest.json','options.html','options.js','page-task.mjs','popup.html','popup.js','sync-core.mjs','sync.css','usage-selection.mjs'];
+const files=['background.js','client.mjs','icon.png','island.mjs','manifest.json','options.html','options.js','page-task.mjs','presets.mjs','popup.html','popup.js','sync-core.mjs','sync.css','usage-selection.mjs'];
 const manifest=JSON.parse(await readFile(new URL('manifest.json',root),'utf8'));
 if(manifest.manifest_version!==3||manifest.permissions.includes('cookies')||manifest.host_permissions?.length)throw Error('unsafe manifest');
 const crc32=bytes=>{let crc=0xffffffff;for(const b of bytes){crc^=b;for(let i=0;i<8;i++)crc=(crc>>>1)^(crc&1?0xedb88320:0)}return (crc^0xffffffff)>>>0};

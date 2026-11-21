@@ -1,19 +1,21 @@
-import { catalog, officialUrl } from './catalog';
+import { presets, matchPreset, accountIndex } from '../browser-extension/presets.mjs';
+import { officialUrl } from './catalog';
 import { InputError, manualItems, object, only, type Unit } from './contracts';
-export const readStates=['ok','login_required','layout_changed','timeout','network'] as const;
+export const readStates=['ok','login_required','layout_changed','timeout','network','permission_required','no_data','account_mismatch'] as const;
 export type ReadState=typeof readStates[number];
 export interface Locator {id:string;name:string;label:string;css:string;valueRegex:string;unit:Unit;kind:'percent_remaining'|'percent_used'|'balance'|'credits'|'reset'}
-export interface SyncSource {id:string;providerId:string;label:string;url:string;enabled:boolean;intervalMinutes:number;useDefaultInterval?:boolean;parser:'preset:chatgpt'|'preset:codex'|'taught';locators:Locator[]}
+export interface SyncSource {id:string;providerId:string;label:string;accountLabel?:string;url:string;enabled:boolean;intervalMinutes:number;useDefaultInterval?:boolean;parser:`preset:${string}`|'taught';locators:Locator[]}
 export interface SyncStatus {sourceId:string;deviceId:string|null;status:ReadState;observedAt:string;lastSuccess:string|null}
 export interface Device {id:string;name:string;createdAt:number;lastSeen:number|null;revokedAt:number|null}
 export const VALUE_REGEX='([+-]?\\d+(?:[.,]\\d+)?)';
 function text(v:unknown,max=120):string {if(typeof v!=='string'||!v.trim()||v.length>max||/[\x00-\x1f]/.test(v))throw new InputError();return v.trim()}
 export function parseSource(value:unknown):SyncSource {
- const s=object(value);only(s,['id','providerId','label','url','enabled','intervalMinutes','useDefaultInterval','parser','locators']);
+ const s=object(value);only(s,['id','providerId','label','accountLabel','url','enabled','intervalMinutes','useDefaultInterval','parser','locators']);
  if(s.useDefaultInterval!==undefined&&typeof s.useDefaultInterval!=='boolean')throw new InputError();
  const id=text(s.id,80),providerId=text(s.providerId,80);if(!/^[\w-]+$/.test(id)||!/^[\w-]+$/.test(providerId))throw new InputError();
  let url:URL;try{url=new URL(text(s.url,2048))}catch{throw new InputError('invalid_source_url')} if(url.protocol!=='https:'||url.username||url.password||url.hostname.includes('*'))throw new InputError('invalid_source_url');
- if(typeof s.enabled!=='boolean'||!Number.isInteger(s.intervalMinutes)||Number(s.intervalMinutes)<15||Number(s.intervalMinutes)>10080||!['preset:chatgpt','preset:codex','taught'].includes(String(s.parser)))throw new InputError();
+ if(['aistudio.google.com','gemini.google.com'].includes(url.hostname)&&accountIndex(url.href)===null)throw new InputError('invalid_source_url');
+ if(typeof s.enabled!=='boolean'||!Number.isInteger(s.intervalMinutes)||Number(s.intervalMinutes)<15||Number(s.intervalMinutes)>10080||!(s.parser==='taught'||presets.some(p=>p.parser===s.parser&&matchPreset(url.href)?.parser===s.parser)))throw new InputError();
  if(!Array.isArray(s.locators)||s.locators.length>8)throw new InputError();
  const ids=new Set<string>();const locators=s.locators.map(raw=>{const l=object(raw);only(l,['id','name','label','css','valueRegex','unit','kind']);
  const id=text(l.id,40);if(!/^[a-zA-Z_]{1,40}$/.test(id)||ids.has(id))throw new InputError();ids.add(id);
@@ -22,12 +24,12 @@ export function parseSource(value:unknown):SyncSource {
  if(String(l.kind).startsWith('percent_')&&l.unit!=='percent'||l.kind==='credits'&&l.unit!=='credits')throw new InputError();
  return {id,name,label,css,valueRegex:VALUE_REGEX,unit:l.unit as Unit,kind:l.kind as Locator['kind']};
  });
- return {id,providerId,label:text(s.label,80),url:url.href,enabled:s.enabled,intervalMinutes:Number(s.intervalMinutes),...(s.useDefaultInterval===undefined?{}:{useDefaultInterval:s.useDefaultInterval}),parser:s.parser as SyncSource['parser'],locators};
+ return {id,providerId,label:text(s.label,80),...(s.accountLabel===undefined?{}:{accountLabel:text(s.accountLabel,80)}),url:url.href,enabled:s.enabled,intervalMinutes:Number(s.intervalMinutes),...(s.useDefaultInterval===undefined?{}:{useDefaultInterval:s.useDefaultInterval}),parser:s.parser as SyncSource['parser'],locators};
 }
-export function defaultSources(providers:{id:string;type:string;region:string;label:string}[]):SyncSource[] {
- return providers.filter(p=>catalog.some(c=>c.type===p.type&&c.mode==='manual')).flatMap(p=>{
- const source:SyncSource={id:`source-${p.id}`,providerId:p.id,label:p.label,url:officialUrl(p.type,p.region),enabled:false,intervalMinutes:60,useDefaultInterval:true,parser:p.type==='chatgpt'?'preset:chatgpt':'taught',locators:[]};
- return p.type==='chatgpt'?[source,{...source,id:`codex-${p.id}`,label:'Codex',url:'https://chatgpt.com/codex/settings/usage',parser:'preset:codex'}]:p.type==='glm'?[source,{...source,id:`coding-${p.id}`,label:'GLM Coding Plan',url:'https://www.bigmodel.cn/coding-plan/personal/usage'}]:[source];
+export function defaultSources(providers:{id:string;type:string;region:string;label:string;accountLabel?:string;usageUrl?:string}[]):SyncSource[] {
+ return providers.flatMap<SyncSource>(p=>{
+ const options=presets.filter(x=>x.type===p.type&&(!['moonshot','siliconflow'].includes(p.type)||x.id.endsWith('intl')===(p.region==='ai'||p.region==='com')));
+ return options.length?options.map((x,i)=>({id:`${i===0?'source':x.id==='codex'?'codex':x.id==='glm-coding'?'coding':x.id}-${p.id}`,providerId:p.id,label:x.name,accountLabel:p.accountLabel??'默认账户',url:p.type==='gemini'&&p.usageUrl?p.usageUrl:x.url,enabled:true,intervalMinutes:60,useDefaultInterval:true,parser:x.parser,locators:[]})):[{id:`source-${p.id}`,providerId:p.id,label:p.label,accountLabel:p.accountLabel??'默认账户',url:officialUrl(p.type,p.region),enabled:false,intervalMinutes:60,useDefaultInterval:true,parser:'taught' as const,locators:[]}];
  });
 }
 export function parseIngest(value:unknown,now=Date.now()) {

@@ -5,11 +5,11 @@ export interface QuotaItem {
  id: string; label: string; amount: number | string | null; unit: Unit;
  resetAt: string | null; limit?: number | string | null; used?: number | string | null;
 }
-export interface Snapshot {items: QuotaItem[]; source: Source; observedAt: string; fetchedAt: string; staleAfter: number; facts: Facts}
-export interface Facts {available?: boolean | null; freeTier?: boolean | null; keyUnlimited?: boolean; limitReset?: 'daily' | 'weekly' | 'monthly' | null}
+export interface Snapshot {accountLabel?:string;items: QuotaItem[]; source: Source; observedAt: string; fetchedAt: string; staleAfter: number; facts: Facts}
+export interface Facts {accountLabel?:string;available?: boolean | null; freeTier?: boolean | null; keyUnlimited?: boolean; limitReset?: 'daily' | 'weekly' | 'monthly' | null}
 export interface CredentialStatus {configured: boolean; lastCheckAt: number | null; lastCheckStatus: string; lastErrorCode: ErrorCode | null}
 export interface Provider {
- id: string; type: string; label: string; source: Source; region: string; nextAllowedFetch: number;
+ id: string; type: string; label: string; accountLabel?:string; usageUrl?:string; source: Source; region: string; nextAllowedFetch: number;
  credentialSlots?: string[]; credential: CredentialStatus; snapshot: Snapshot | null;
 }
 export type CardState = 'healthy' | 'warning' | 'reset_due' | 'stale' | 'error_with_cache' | 'error' | 'unconfigured';

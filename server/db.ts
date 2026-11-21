@@ -1,3 +1,4 @@
+import { officialUrl } from '../shared/catalog';
 import { type Provider, type Snapshot, type ErrorCode } from '../shared/contracts';
 interface Row {
  id: string; provider_type: string; label: string; source_mode: Provider['source']; config_json: string; next_allowed_fetch_ms: number;
@@ -8,11 +9,16 @@ export async function overview(db: D1Database): Promise<Provider[]> {
  const result=await db.prepare(`SELECT p.*,s.source,s.items_json,s.facts_json,s.fetched_at,s.observed_at,s.stale_after
  FROM providers p LEFT JOIN snapshots s ON s.provider_id=p.id WHERE p.enabled=1 ORDER BY p.sort_order,p.created_at,p.id`).all<Row>();
  const credentials=(await db.prepare('SELECT provider_id,slot,last_check_at,last_check_status,last_error_code FROM credentials').all<{provider_id:string;slot:string;last_check_at:number|null;last_check_status:string;last_error_code:ErrorCode|null}>()).results;
+ const pages=(await db.prepare('SELECT provider_id,snapshot_json FROM extension_snapshots').all<{provider_id:string;snapshot_json:string}>()).results;
  return result.results.map(r=>{
  const slots=credentials.filter(c=>c.provider_id===r.id),c=slots.find(c=>c.last_error_code)||slots.find(c=>c.slot==='management')||slots[0];
- return {id:r.id,type:r.provider_type,label:r.label,source:r.source??r.source_mode,region:JSON.parse(r.config_json).region??'cn',nextAllowedFetch:r.next_allowed_fetch_ms,
+ const config=JSON.parse(r.config_json);const apiSnapshot:Snapshot|null=r.items_json===null?null:{accountLabel:JSON.parse(r.facts_json??'{}').accountLabel??'默认账户',items:JSON.parse(r.items_json),facts:JSON.parse(r.facts_json??'{}'),source:r.source!,observedAt:r.observed_at!,fetchedAt:r.fetched_at!,staleAfter:r.stale_after!};
+ const page=pages.find(x=>x.provider_id===r.id);const pageSnapshot:Snapshot|null=page?JSON.parse(page.snapshot_json):null;
+ const usePage=!!pageSnapshot&&(!apiSnapshot||apiSnapshot.items[0]?.amount==null);
+ const snapshot=usePage?{...pageSnapshot!,facts:{...(apiSnapshot?.facts??{}),...pageSnapshot!.facts},items:[...pageSnapshot!.items,...(apiSnapshot?.items.filter(i=>!pageSnapshot!.items.some(pageItem=>pageItem.id===i.id))??[])]}:apiSnapshot;
+ return {id:r.id,accountLabel:config.accountLabel??'默认账户',usageUrl:config.usageUrl??officialUrl(r.provider_type,config.region??'cn'),type:r.provider_type,label:r.label,source:snapshot?.source??r.source_mode,region:JSON.parse(r.config_json).region??'cn',nextAllowedFetch:r.next_allowed_fetch_ms,
  credentialSlots:slots.map(c=>c.slot),credential:{configured:slots.length>0,lastCheckAt:c?.last_check_at??null,lastCheckStatus:c?.last_check_status??'unverified',lastErrorCode:c?.last_error_code??null},
- snapshot:r.items_json===null?null:{items:JSON.parse(r.items_json),facts:JSON.parse(r.facts_json??'{}'),source:r.source!,observedAt:r.observed_at!,fetchedAt:r.fetched_at!,staleAfter:r.stale_after!}};
+ snapshot};
  });
 }
 

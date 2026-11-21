@@ -26,7 +26,7 @@ async function refreshProvider(db: D1Database,master: string,p: Provider,now: nu
  try{
   const slots:Record<string,string>={};for(const c of credentials)slots[c.slot]=await decryptSecret(master,c.aad_provider_id??p.id,c.key_kind,c.cipher_json);
   const result=p.type==='openrouter'?await fetchOpenRouter(slots):await fetchQuota(p.type,p.region,slots.key);
-  const s: Snapshot={...result,source:'api',observedAt:new Date(now).toISOString(),fetchedAt:new Date(now).toISOString(),staleAfter:3600};
+  const s: Snapshot={...result,accountLabel:p.accountLabel??'默认账户',facts:{...result.facts,accountLabel:p.accountLabel??'默认账户'},source:'api',observedAt:new Date(now).toISOString(),fetchedAt:new Date(now).toISOString(),staleAfter:3600};
   await db.batch([snapshotStatement(db,p.id,s,now),db.prepare('UPDATE credentials SET last_check_at=?,last_check_status=?,last_error_code=NULL,updated_at=? WHERE provider_id=?').bind(now,'ok',now,p.id)]);
  }catch(e){
   const error=e instanceof AdapterError?e:new AdapterError('upstream_error');
@@ -54,12 +54,14 @@ export async function handleApi(request: Request,env: Env): Promise<Response> {
   }
  }
  if(path==='/api/providers') {
-  only(body,['type','region','label','key','slot','management']);const {spec,region}=typeRegion(body);
+  only(body,['type','region','label','key','slot','management','accountLabel','pageOnly']);const {spec,region}=typeRegion(body);
   if(spec.mode==='api')slotInput(spec.type,body.slot);if(body.management!==undefined&&body.slot!==undefined)throw new InputError();
   if(spec.type!=='openrouter'&&(body.management!==undefined||body.slot!==undefined&&body.slot!=='key'))throw new InputError();
   const label=body.label??spec.name;if(typeof label!=='string' || !label.trim() || label.length>80 || /[\x00-\x1f]/.test(label))throw new InputError();
-  const id=crypto.randomUUID();const statements=[db.prepare(`INSERT INTO providers(id,provider_type,label,category,source_mode,config_json,created_at,updated_at) VALUES(?,?,?,?,?,?,?,?)`).bind(id,spec.type,label.trim(),spec.mode==='api'?'api_balance':'subscription',spec.mode,JSON.stringify({region}),now,now)];
-  if(spec.mode==='api') {
+  const accountLabel=body.accountLabel??'默认账户';if(typeof accountLabel!=='string'||!accountLabel.trim()||accountLabel.length>80||/[\x00-\x1f]/.test(accountLabel))throw new InputError();
+  if(body.pageOnly!==undefined&&body.pageOnly!==true)throw new InputError();
+  const id=crypto.randomUUID();const statements=[db.prepare(`INSERT INTO providers(id,provider_type,label,category,source_mode,config_json,created_at,updated_at) VALUES(?,?,?,?,?,?,?,?)`).bind(id,spec.type,label.trim(),spec.mode==='api'?'api_balance':'subscription',spec.mode,JSON.stringify({region,accountLabel:accountLabel.trim()}),now,now)];
+  if(spec.mode==='api'&&body.pageOnly!==true) {
    if(!env.MASTER_ENCRYPTION_KEY)throw new InputError('encryption_not_configured',503);
    const secrets=spec.type==='openrouter' ? (body.management!==undefined ? [['management',body.management],...(body.key!==undefined?[['key',body.key]]:[])] : [[slotInput(spec.type,body.slot),body.key]]) : [['key',body.key]];
    for(const [slot,value] of secrets){const secret=secretInput(value),kind=credentialKind(spec.type,String(slot));
@@ -79,9 +81,16 @@ export async function handleApi(request: Request,env: Env): Promise<Response> {
   const wait=next.length?Math.max(1,Math.ceil((Math.min(...next)-now)/1000)):60;
   return json({providers},200,{'Retry-After':String(wait)});
  }
- const match=path.match(/^\/api\/providers\/([a-f0-9-]{36})\/(credential|manual|import)$/);
+ const match=path.match(/^\/api\/providers\/([a-f0-9-]{36})\/(credential|manual|import|account)$/);
  if(!match)return json({error:'not_found'},404);
  const [,id,action]=match;const p=(await overview(db)).find(p=>p.id===id);if(!p)return json({error:'not_found'},404);
+ if(action==='account'){
+  only(body,['accountLabel']);if(typeof body.accountLabel!=='string'||!body.accountLabel.trim()||body.accountLabel.length>80||/[\x00-\x1f]/.test(body.accountLabel))throw new InputError();
+  const accountLabel=body.accountLabel.trim();
+  const row=await db.prepare('SELECT config_json FROM providers WHERE id=?').bind(id).first<{config_json:string}>();
+  const sources=(await db.prepare('SELECT id,config_json FROM extension_sources').all<{id:string;config_json:string}>()).results.filter(r=>JSON.parse(r.config_json).providerId===id);
+  await db.batch([db.prepare('UPDATE providers SET config_json=?,updated_at=? WHERE id=?').bind(JSON.stringify({...JSON.parse(row!.config_json),accountLabel}),now,id),...sources.map(r=>db.prepare('UPDATE extension_sources SET config_json=?,updated_at=? WHERE id=?').bind(JSON.stringify({...JSON.parse(r.config_json),accountLabel}),now,r.id))]);return json({saved:true});
+ }
  if(action==='credential') {
   only(body,['key','clear','slot']);const slot=slotInput(p.type,body.slot);if(preset(p.type).mode!=='api')throw new InputError();
   if(body.clear===true) {
@@ -106,5 +115,6 @@ export async function handleApi(request: Request,env: Env): Promise<Response> {
   if(p.type!=='custom' && items.some(i=>!fieldsFor(p.type,p.region).some(f=>f.id===i.id&&f.unit===i.unit)))throw new InputError();
   snapshot={items,source:'manual',observedAt:new Date(now).toISOString(),fetchedAt:new Date(now).toISOString(),staleAfter:86400,facts:{}};
  }
+ snapshot={...snapshot,accountLabel:p.accountLabel??'默认账户',facts:{...snapshot.facts,accountLabel:p.accountLabel??'默认账户'}};
  const saved=await snapshotStatement(db,id,snapshot,now).run();if(saved.meta.changes!==1)throw new InputError('older_observation',409);return json({saved:true});
 }

@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
   "name": "AI Quota Sync",
-  "version": "1.1.0",
-  "description": "自动同步你教学的官方额度数值到自己的看板。仅读取指定显示元素。",
+  "version": "1.2.0",
+  "description": "一键读取官方额度页，按账户同步到自己的看板。仅读取指定显示数值。",
   "permissions": [
     "storage",
     "alarms",
